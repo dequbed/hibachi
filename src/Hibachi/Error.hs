@@ -3,6 +3,8 @@ module Hibachi.Error
     , HibachiError(..)
     ) where
 
+import Prelude hiding ((<>))
+
 import Data.Text (Text)
 import qualified Data.Text as T
 

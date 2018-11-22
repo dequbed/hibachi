@@ -22,7 +22,7 @@ executable hibachi
     hs-source-dirs:
         app
     build-depends:
-          base >=4.10 && <4.11
+          base >=4.11 && <4.12
         , Hibachi
     default-extensions:
         OverloadedStrings
@@ -42,7 +42,7 @@ library
           , Hibachi.Error
 
     build-depends:
-          base >=4.10 && <4.11
+          base >=4.11 && <4.12
         , containers
         , unordered-containers
         , pandoc >= 2.2.1 && <2.3
