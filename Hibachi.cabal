@@ -51,6 +51,7 @@ library
         , conduit >= 1.3.0 && <1.4
         , text
         , time
+        , tagged
     default-extensions:
         OverloadedStrings
     default-language:
