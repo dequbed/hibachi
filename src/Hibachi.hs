@@ -1,12 +1,10 @@
 module Hibachi where
 
-import Prelude hiding (filter)
+import Prelude hiding (filter, writeFile)
 
 import Hibachi.Post
-import Hibachi.Read
-import Data.Time
 
-import Data.Text.IO as TIO
+import Data.Time
 
 import Git
 import Git.Tree.Working
@@ -18,7 +16,12 @@ import Data.Tagged
 import Data.Maybe
 
 import Conduit
-import Data.Conduit.List hiding (map, mapM_)
+import Data.Conduit.List hiding (mapM_)
+
+import Data.Text.Lazy.IO
+
+import CMark
+import Lucid
 
 libmain = do
     let repoOpts = RepositoryOptions { repoPath = "/home/glr/Documents/Blog/"
@@ -26,19 +29,26 @@ libmain = do
                                      , repoIsBare = False
                                      , repoAutoCreate = False
                                      }
-    a <- withRepository' lgFactory repoOpts $ do
+    c <- withRepository' lgFactory repoOpts $ do
+        -- First off: Check was has happened since the last commit we
+        -- generated
         refhead <- resolveReference "HEAD"
         tr <- lookupTree . commitTree =<< lookupCommit (Tagged $ fromJust refhead)
         a <- runConduit $ sourceTreeEntries tr .| filter justFiles .| sinkList
-        liftIO $ mapM_ printC (snd <$> a)
-        return a
-    print (map fst a)
+        let (b, c) = unzip a
+        c' <- Prelude.mapM printC c
+        return $ zip b c'
+    -- c :: [FilePath, Text] -- [git-path, content]
+
+    let (p, c') = unzip c
+        h = Prelude.map (commonmarkToHtml [optSmart, optNormalize]) c'
+        l = Prelude.map wrapPost h
+        l' = Prelude.map renderText l
+        p' = Prelude.map show p
+
+    Prelude.mapM_ (uncurry writeFile) $ zip p' l'
 
   where
     justFiles (_, (BlobEntry _ _)) = True
     justFiles _ = False
-    printC (BlobEntry o _) = o
-    printC' (Blob _ c) = case c of
-        (BlobString bs) -> print bs
-        (BlobStringLazy bs) -> print bs
-        _ -> return ()
+    printC (BlobEntry o _) = catBlobUtf8 o
