@@ -1,70 +1,60 @@
 module Hibachi.Post
-    ( Post(..)
-    , buildPost
-    , extractBody
-    , extractTitle
-    , extractAbstract
-    ) where
-
-import Data.Text (Text)
-import qualified Data.Text as T
-
-import Data.Map.Lazy (Map)
-import qualified Data.Map.Lazy as M
-
-import Data.Time
-
-import Text.Pandoc
-
-import Hibachi.Types
-
-data Post = Post
-    { body :: [Block]
-    , title :: [Inline]
-    , abstract :: [Block]
-    , tags :: [Tag]
-    , authors :: [Author]
-    , posted :: UTCTime
-    , edited :: UTCTime
-    } deriving (Eq, Show)
-
-buildPost :: Pandoc -> [Author] -> UTCTime -> UTCTime -> Result Post
-buildPost (Pandoc m c) as p e = do
-        t <- buildTitle =<< metalookup m "title"
-        a <- buildAbstract =<< metalookup m "abstract"
-        ts <- buildTagsM $ metalookupM m "tags"
-        return (Post c t a ts as p e)
+    ( wrapPost
+    )
     where
-        metalookup m t = maybe (Left $ MetaLookupFailed $ T.pack t) pure $ metalookupM m t
-        metalookupM m = flip M.lookup (unMeta m)
 
-buildTitle :: MetaValue -> Result [Inline]
-buildTitle (MetaInlines i) = Right i
-buildTitle (MetaString s) = Right [Str s]
-buildTitle _ = Left InvalidTitleType
+import Lucid
+import Data.Text (Text, intercalate)
 
-buildAbstract :: MetaValue -> Result [Block]
-buildAbstract (MetaBlocks b) = Right b
-buildAbstract (MetaInlines i) = Right [Para i]
-buildAbstract (MetaString s) = Right [Para [Str s]]
-buildAbstract _ = Left InvalidAbstractType
+wrapPost :: Text -> Html ()
+wrapPost t = wrapPost' $ (toHtmlRaw t)
 
-buildTagsM (Just v) = buildTags v
-buildTagsM Nothing = Right []
+wrapPost' :: Html () -> Html ()
+wrapPost' p = html_ $ do
+    htmlHead
+        "Gregor 'dequbed' Reitzenstein"
+        "My Blog"
+        ["Blog", "dequbed"]
+    htmlBody p
 
-buildTags :: MetaValue -> Result [Tag]
-buildTags (MetaList xs) = sequence $ fmap buildTag xs
-buildTags _ = Left InvalidTagsType
+htmlHead :: Text -> Text -> [Text] -> Html ()
+htmlHead author desc keywords = head_ $ do
+    link_ [rel_ "stylesheet", type_ "text/css", href_ "/styles/default.css"]
+    meta_ [charset_ "utf-8"]
+    m "generator" "hibachi-1.0"
+    m "referrer" "no-referrer"
+    m "HandheldFriendly" "True"
+    m "viewport" "width=device-width, initial-scale=1.0"
 
-buildTag :: MetaValue -> Result Tag
-buildTag (MetaString s) = Right $ T.pack s
-buildTag _ = Left InvalidTagType
+    m "author" author
+    m "description" desc
+    m "keywords" $ intercalate "," keywords
+  where
+    m a b = meta_ [name_ a, content_ b]
 
-extractBody :: Post -> Pandoc
-extractBody p = Pandoc nullMeta $ body p
+htmlBody :: Html () -> Html ()
+htmlBody p = body_ $ do
+    let togglenav = "toggle-nav"
+    input_ [id_ togglenav, class_ togglenav, type_ "checkbox"]
+    div_ [class_ "mobile-bar"] $ label_ [for_ togglenav] ""
+    nav_ [class_ "navbar"] $ do
+        header_ $ a_ [class_ "navlink", href_ "/"] $ img_ [class_ "logo", src_ "/images/logo.svg"]
+        ul_ [id_ "navleft"] $ do
+            a_ (navlink "/about") $ li_ ( span_ (navicon "question-circle") "" <> "About" )
+            a_ (navlink "/projects") $ li_ ( span_ (navicon "terminal") "" <> "Projects" )
+        div_ [class_ "spacer"] ""
+        ul_ [id_ "navright"] $ do
+            a_ (navlink "/feed.xml") $ li_ ( span_ (navicon "feed") "" <> "RSS" )
+            a_ (navlink "https://github.com/dequbed") $ li_ ( span_ (navicon "github") "" <> "Github" )
+            a_ (navlink "https://twitter.com/dequbed") $ li_ ( span_ (navicon "twitter") "" <> "Twitter" )
 
-extractTitle :: Post -> Pandoc
-extractTitle p = Pandoc nullMeta $ [Plain $ title p]
+    main_ $ article_ [class_ "post"] p
 
-extractAbstract :: Post -> Pandoc
-extractAbstract p = Pandoc nullMeta $ abstract p
+    footer_ [id_ "footer"] $ span_ [class_ "license"] $ do {
+        "Unless otherwise noted all content is licensed under a";
+        a_ [rel_ "license", href_ "http://creativecommons.org/licenses/by-sa/4.0/"]
+            "Creative Commons Attribution-ShareAlike 4.0 International License";
+    }
+  where
+    navicon name = [class_ $ "navicon fa fa-" <> name]
+    navlink href = [class_ "navlink", href_ href]
