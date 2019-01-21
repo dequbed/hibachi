@@ -3,6 +3,7 @@ module Hibachi where
 import Prelude hiding (filter, writeFile)
 
 import Hibachi.Post
+import Hibachi.Style
 
 import Data.Time
 
@@ -45,6 +46,8 @@ libmain = do
         l = Prelude.map wrapPost h
         l' = Prelude.map renderText l
         p' = Prelude.map show p
+
+    putCss ourStyle
 
     Prelude.mapM_ (uncurry writeFile) $ zip p' l'
 
