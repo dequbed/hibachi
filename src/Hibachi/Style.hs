@@ -5,7 +5,7 @@ module Hibachi.Style
     )
     where
 
-import Prelude hiding (span, rem, (**))
+import Prelude hiding (span, rem, not, (**))
 
 import Data.Text.Lazy (Text)
 
@@ -24,6 +24,11 @@ ourStyle = do
     typesetting
     navbar
     mainElement
+    footerElement
+    links
+    sourceCode
+    lists
+    logo
 
 fonts :: Css
 fonts = do
@@ -280,8 +285,8 @@ post = do
     ".tag" ? do
         marginLeft (px 5)
 
-footer :: Css
-footer = do
+footerElement :: Css
+footerElement = do
     "#footer" ? do
         display grid
         width (pct 100)
@@ -304,6 +309,35 @@ links = do
         color "#8e16a6"
     a#focus <> a#hover ?
         borderBottom solid (px 1) none
+    a#active ?
+        color "#410a4c"
+    a#("href"*="http")#before#(not ".navlink") ? do
+        content $ stringContent "\61582"
+        fontFamily ["FontAwesome"] [monospace]
+        fontSize (em 0.6)
+        paddingRight (em 0.2)
+
+sourceCode :: Css
+sourceCode = do
+    ".sourceLine" ** a ? do
+        color "#0e0e0e"
+        textDecoration none
+    (".sourceLine" ** a#focus) <>
+        (".sourceLine" ** a#hover) ? do
+            backgroundColor "#d7d7d7"
+            border none none none
+
+lists :: Css
+lists = do
+    ul <> ol ?
+        paddingLeft (rem 1)
+
+    ul ?
+        listStyle decimal inside (other "‒ ")
+
+logo :: Css
+logo = ".logo" ?
+    height (rem 5.5)
 
 resets :: Css
 resets = do
