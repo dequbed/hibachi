@@ -114,7 +114,7 @@ navbar = do
         height (rem 3)
         backgroundColor "#50556c"
         boxShadow . pure $ bsColor (rgba 0 0 0 0.3) $ shadowWithBlur (px 0) (px 1) (px 5)
-        "willChange" -: "transform"
+        "will-change" -: "transform"
         transition "transform" (ms 300) ease none
         justifyContent center
         display flex
@@ -128,7 +128,7 @@ navbar = do
         height (rem 3)
         textAlign center
         cursor pointer
-        "willChange" -: "transform"
+        "will-change" -: "transform"
         transition "transform" (ms 300) ease none
 
     ".mobile-bar" |> label#after ? do
@@ -137,7 +137,7 @@ navbar = do
         fontSize (em 2)
         color "#eee"
         lineHeight (rem 3)
-        "backfaceVisibility" -: "hidden"
+        "backface-visibility" -: "hidden"
         transition "transform" (ms 500) ease none
 
     ".mobile-bar" ** ".navlink" ? do
@@ -200,7 +200,17 @@ navbar = do
         border none none none
         backgroundColor "#454a5e"
 
-    nav ** ".spacer" ? flexGrow 0
+    nav ** ".spacer" ? flexGrow 1
+
+    query Media.screen [(Media.minWidth (rem 49))] $ do
+        position fixed
+        left nil
+        right nil
+        width (pct 100)
+        height (rem 5.5)
+        marginTop nil
+        marginLeft nil
+        flexDirection row
 
     ".toggle-nav:checked ~ nav" ? do
         "will-change" -: "transform"
