@@ -20,6 +20,7 @@ import Conduit
 import Data.Conduit.List hiding (mapM_)
 
 import Data.Text.Lazy.IO
+import Data.ByteString.Char8 (unpack)
 
 import CMark
 import Lucid
@@ -30,26 +31,34 @@ libmain = do
                                      , repoIsBare = False
                                      , repoAutoCreate = False
                                      }
-    c <- withRepository' lgFactory repoOpts $ do
+    f <- withRepository' lgFactory repoOpts $ do
         -- First off: Check was has happened since the last commit we
         -- generated
         refhead <- resolveReference "HEAD"
-        tr <- lookupTree . commitTree =<< lookupCommit (Tagged $ fromJust refhead)
+        commit <- lookupCommit (Tagged $ fromJust refhead)
+
+        let author = signatureName $ commitAuthor commit
+            committime = zonedTimeToUTC $ signatureWhen $ commitCommitter commit
+            postB = buildPost author "My Blog" ["Blog"] committime ["TagA"]
+
+        tr <- lookupTree . commitTree $ commit
         a <- runConduit $ sourceTreeEntries tr .| filter justFiles .| sinkList
         let (b, c) = unzip a
         c' <- Prelude.mapM printC c
-        return $ zip b c'
+        return $ (zip b c', postB)
     -- c :: [FilePath, Text] -- [git-path, content]
 
-    let (p, c') = unzip c
-        h = Prelude.map (commonmarkToHtml [optSmart, optNormalize]) c'
-        l = Prelude.map wrapPost h
-        l' = Prelude.map renderText l
-        p' = Prelude.map show p
+    let (c, postB) = f
+    let (path, c') = unzip c
+        path' = Prelude.map unpack path
 
-    putCss ourStyle
+    let p' = Prelude.map postB c'
+        r = Prelude.map (renderText . renderPost) p'
 
-    Prelude.mapM_ (uncurry writeFile) $ zip p' l'
+    writeFile "default.css" styleText
+
+    Prelude.mapM_ (uncurry writeFile) $ zip path' r
+    return ()
 
   where
     justFiles (_, (BlobEntry _ _)) = True

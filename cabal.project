@@ -1,0 +1,3 @@
+packages:
+  ./Hibachi.cabal
+  ../gitlib/gitlib-libgit2/gitlib-libgit2.cabal
