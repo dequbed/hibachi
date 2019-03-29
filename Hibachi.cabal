@@ -36,6 +36,7 @@ library
     exposed-modules:
           Hibachi
           Hibachi.Post
+          Hibachi.State
           Hibachi.Style
 
     build-depends:
@@ -52,6 +53,9 @@ library
         , text
         , time
         , tagged
+        , filepath
+        , yaml
+        , store
     default-extensions:
         OverloadedStrings
     default-language:
