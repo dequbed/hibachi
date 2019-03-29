@@ -15,7 +15,7 @@ import qualified Clay.Media as Media
 import qualified Clay.Flexbox as Flexbox
 
 styleText :: Text
-styleText = renderWith compact [] ourStyle
+styleText = renderWith pretty [] ourStyle
 
 ourStyle :: Css
 ourStyle = do
@@ -24,6 +24,7 @@ ourStyle = do
     typesetting
     navbar
     mainElement
+    post
     footerElement
     links
     sourceCode
@@ -32,8 +33,8 @@ ourStyle = do
 
 fonts :: Css
 fonts = do
-    mf [ ("Dearest", "/fonts/Dearest-webfont.woff", normal, normal)
-       , ("Vollkorn", "/fonts/Vollkorn-Regular.woff2", normal, weight 400)
+    mf [ ("Vollkorn", "/fonts/Vollkorn-Regular.woff2", normal, weight 400)
+       , ("Hack", "/fonts/Hack-Regular.woff2", normal, weight 400)
        , ("Vollkorn", "/fonts/Vollkorn-Italic.woff2", italic, weight 400)
        , ("Vollkorn", "/fonts/Vollkorn-Semibold.woff2", normal, weight 500)
        , ("Vollkorn", "/fonts/Vollkorn-SemiboldItalic.woff2", italic, weight 500)
@@ -41,10 +42,10 @@ fonts = do
        , ("Vollkorn", "/fonts/Vollkorn-BoldItalic.woff2", italic, weight 700)
        , ("Vollkorn", "/fonts/Vollkorn-Black.woff2", normal, weight 900)
        , ("Vollkorn", "/fonts/Vollkorn-BlackItalic.woff2", italic, weight 900)
-       , ("Hack", "/fonts/Hack-Regular.woff2", normal, weight 400)
        , ("Hack", "/fonts/Hack-Italic.woff2", italic, weight 400)
        , ("Hack", "/fonts/Hack-Bold.woff2", normal, weight 700)
        , ("Hack", "/fonts/Hack-BoldItalic.woff2", italic, weight 700)
+       , ("Dearest", "/fonts/Dearest-webfont.woff", normal, normal)
        , ("FontAwesome", "/fonts/fontawesome-webfont.woff2", normal, normal)
        ]
   where
@@ -59,6 +60,8 @@ typesetting :: Css
 typesetting = do
     html <> body ? do
         "font-feature-settings" -: "'zero', 'ss11', 'ss14', 'ss17', 'onum', 'pnum'"
+        fontSize (pt 14)
+        fontFamily ["Vollkorn"] [serif]
     h1 <> h2 <> h3 <> h4 <> h5 <> h6 ? do
         "font-variant-caps" -: "small-caps"
 
@@ -157,10 +160,10 @@ navbar = do
 
     "#navleft" ? do
         float floatLeft
-        flexGrow 4
+        "flex" -: "4"
     "#navright" ? do
         float floatRight
-        flexGrow 6
+        "flex" -: "6"
 
     nav ? do
         "will-change" -: "transform"
@@ -179,11 +182,11 @@ navbar = do
         justifyContent center
     nav ** header ? do
         width (pct 100)
-        flexGrow 2
+        "flex" -: "2"
     nav ** ul ? do
         fontSize (rem 1.2)
         textAlign center
-        listStyle none none none
+        "list-style" -: "none none"
         display flex
         width (pct 100)
         height (pct 100)
@@ -200,9 +203,10 @@ navbar = do
         border none none none
         backgroundColor "#454a5e"
 
-    nav ** ".spacer" ? flexGrow 1
+    nav ** ".spacer" ? do
+        "flex" -: "1"
 
-    query Media.screen [(Media.minWidth (rem 49))] $ do
+    query Media.screen [(Media.minWidth (rem 49))] $ nav ? do
         position fixed
         left nil
         right nil
@@ -211,6 +215,13 @@ navbar = do
         marginTop nil
         marginLeft nil
         flexDirection row
+
+    query Media.screen [(Media.minWidth (rem 49))] $ do
+        nav ** ul ? do
+            flexDirection row
+        nav ** ul ** a ? do
+            "flex" -: "1"
+            height (rem 5.5)
 
     ".toggle-nav:checked ~ nav" ? do
         "will-change" -: "transform"
@@ -243,7 +254,7 @@ navbar = do
 mainElement :: Css
 mainElement = do
     main_ ? do
-        flexGrow 1
+        "flex" -: "1"
         position relative
         paddingTop (rem 5.5)
         margin nil auto auto auto
@@ -288,9 +299,15 @@ post = do
         fontSize (rem 0.8)
 
     ".tags" ? do
+        marginLeft (em 0.5)
+        marginRight (em 0.5)
         padding nil nil nil nil
-        listStyle none none none
+        "list-style" -: "none"
         display inlineFlex
+
+    time ? do
+        marginLeft (em 0.5)
+        marginRight (em 0.5)
 
     ".tag" ? do
         marginLeft (px 5)
@@ -341,9 +358,8 @@ lists :: Css
 lists = do
     ul <> ol ?
         paddingLeft (rem 1)
-
-    ul ?
-        listStyle decimal inside (other "‒ ")
+    ul ? ("list-style" -: "disc inside")
+    ol ? ("list-style" -: "decimal inside")
 
 logo :: Css
 logo = ".logo" ?
@@ -372,7 +388,7 @@ fontreset = h1 <> h2 <> h3 <> h4 <> h5 <> h6 ? do
         fontWeight normal
 
 listreset :: Css
-listreset = ul ? listStyle none none none
+listreset = ul ? ("list-style" -: "none none")
 
 inputreset :: Css
 inputreset = button <> input <> select <> textarea ? margin nil nil nil nil
