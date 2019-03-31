@@ -59,6 +59,7 @@ library
         , yaml
         , store
         , lens
+        , xdg-basedir
     default-extensions:
         OverloadedStrings
     default-language:
