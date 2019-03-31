@@ -62,6 +62,7 @@ typesetting = do
         "font-feature-settings" -: "'zero', 'ss11', 'ss14', 'ss17', 'onum', 'pnum'"
         fontSize (pt 14)
         fontFamily ["Vollkorn"] [serif]
+        backgroundColor "#3a3e4f"
     h1 <> h2 <> h3 <> h4 <> h5 <> h6 ? do
         "font-variant-caps" -: "small-caps"
 
@@ -92,6 +93,7 @@ typesetting = do
         lineHeight (rem 1.5)
         textTransform uppercase
         marginTop (rem 0.25)
+        marginRight (rem 0.3)
 
     blockquote ? margin (em 1.5) (em 1.5) (em 1.5) (em 1.5)
 
