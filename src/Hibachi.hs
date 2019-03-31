@@ -56,8 +56,6 @@ posts path = do
         liftIO $ publishStories stories
         liftIO $ publishIndex $ posts ++ stories
 
-diffCommit :: Commit r -> Commit r -> [TreeFilePath]
-
 generatePosts :: MonadGit r m => Text -> ZonedTime -> Tree r -> m [Either ParseException Post]
 generatePosts author time tree = do
     runConduit $ sourceTreeBlobEntries tree
