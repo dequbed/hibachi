@@ -5,6 +5,7 @@ import Prelude hiding (filter, writeFile)
 import Hibachi.Post
 import Hibachi.Style
 import Hibachi.Index
+import Hibachi.Shake
 
 import Data.Time
 
@@ -25,7 +26,7 @@ import Conduit
 import Data.Conduit.List hiding (mapM_, mapM)
 
 import Data.Text (Text)
-import Data.Text.Lazy.IO hiding (putStrLn)
+import qualified Data.Text.Lazy as TL
 import Data.ByteString.Char8 (unpack)
 
 import CMark
@@ -49,12 +50,7 @@ posts path = do
         let author = signatureName $ commitAuthor c
             time   = signatureWhen $ commitCommitter c
 
-        posts   <- rights <$> generatePosts author time t
-        stories <- rights <$> generateStories author time t
-
-        liftIO $ publishPosts posts
-        liftIO $ publishStories stories
-        liftIO $ publishIndex $ posts ++ stories
+        undefined
 
 generatePosts :: MonadGit r m => Text -> ZonedTime -> Tree r -> m [Either ParseException Post]
 generatePosts author time tree = do
@@ -86,13 +82,13 @@ generateStories author time tree =
   where storyFile (p, _, PlainBlob) = "." /= (takeDirectory $ unpack p)
         storyFile _                 = False
 
-publishPosts :: [Post] -> IO ()
-publishPosts = mapM_ publishPost
-publishStories :: [Post] -> IO ()
-publishStories = mapM_ publishPost
-publishPost post = do
-    createDirectoryIfMissing True $ takeDirectory (path post)
-    writeFile (path post) $ renderText $ renderPost post
+{-
+ -getPosts :: BranchAction [Post]
+ -getPosts = return $ []
+ -
+ -getStoryPosts :: BranchAction [Post]
+ -getStoryPosts = return $ []
+ -}
 
-publishIndex :: [Post] -> IO ()
-publishIndex = writeFile "index.html" . renderText . renderIndex
+generateIndex :: [Post] -> TL.Text
+generateIndex = renderText . renderIndex

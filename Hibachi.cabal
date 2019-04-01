@@ -24,6 +24,8 @@ executable hibachi
     build-depends:
           base >=4.12 && <4.13
         , Hibachi
+        , shake >= 0.17
+        , text
     default-extensions:
         OverloadedStrings
     default-language:
@@ -39,6 +41,7 @@ library
           Hibachi.State
           Hibachi.Index
           Hibachi.Style
+          Hibachi.Shake
 
     build-depends:
           base >=4.12 && <4.13
@@ -60,6 +63,8 @@ library
         , store
         , lens
         , xdg-basedir
+        , shake >= 0.17
+        , transformers
     default-extensions:
         OverloadedStrings
     default-language:
