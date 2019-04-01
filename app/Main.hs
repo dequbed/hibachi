@@ -35,7 +35,7 @@ main = shakeArgs shakeOptions $ do
  -}
 
     withRepo "/home/glr/Documents/Blog/posts/" $ do
-        withBranch "static" $ do
+        onBranch "static" $ do
             indexMatch ["robots.txt"] $ \p -> do
                 c <- gitContent p
                 liftIO $ writeFile p c

@@ -26,8 +26,28 @@ import Data.Conduit
 import Data.Conduit.Combinators (sinkList)
 import qualified Data.Conduit.List as C
 
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 
+
+-- resonable use-cases:
+-- * depend on the value of a tag (blob/commit) to be able to do certain
+-- action if the tag changes
+-- * Depend on (branch,path) of a file in a repo
+-- * depend on the value of a named reference
+-- * depend on the value of a symbolic reference
+
+newtype GitBlob = GitBlob ByteString
+    deriving (Show, Eq, Hashable, Binary, NFData)
+type instance RuleResult GitBlob = ByteString
+
+data GitBlobRule = GitBlobRule GitBlob (Action ())
+
+blobRule :: ByteString -> Action () -> Rules ()
+blobRule key action = addUserRule $ GitBlobRule (GitBlob key) action
+
+blobNeed :: ByteString -> Action ByteString
+blobNeed = apply1 . GitBlob
 
 type GitRules = ReaderT FilePath Rules
 type BranchRules = ReaderT Text GitRules
@@ -47,12 +67,8 @@ data GitRule = GitRule GitFile (Action ())
 gitRule :: (RepoPath, Branch, TreeFilePath) -> Action () -> Rules ()
 gitRule key action = addUserRule $ GitRule (GitFile key) action
 
-indexMatch :: [FilePattern] -> (\FilePath -> Action ()) -> BranchRules ()
-indexMatch ps f = do
-    branch <- ask
-    repo <- lift $ ask
-    xs <- liftIO $ getGitDirectoryFilesIO (repo, branch) "." ps
-    mapM f xs
+indexMatch :: [FilePattern] -> (FilePath -> Action ()) -> BranchRules ()
+indexMatch ps f = undefined
 
 getGitDirectoryFilesIO :: (RepoPath, Branch) -> TreeFilePath -> [FilePattern] -> IO [TreeFilePath]
 getGitDirectoryFilesIO (repo, branch) dir patterns = withRepository lgFactory repo $ do
@@ -102,3 +118,5 @@ addBuiltinGitRule = addBuiltinRule noLint noIdentity run
                 now <- liftIO $ getOid key
                 return $ RunResult ChangedRecomputeDiff (encodeUtf8 now) now
 
+
+gitContent = undefined
