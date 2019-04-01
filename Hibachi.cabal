@@ -39,6 +39,7 @@ library
           Hibachi
           Hibachi.Post
           Hibachi.State
+          Hibachi.Git
           Hibachi.Index
           Hibachi.Style
           Hibachi.Shake
