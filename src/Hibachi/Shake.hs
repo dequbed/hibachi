@@ -37,17 +37,17 @@ import qualified Data.ByteString.Char8 as BS
 -- * depend on the value of a named reference
 -- * depend on the value of a symbolic reference
 
-newtype GitBlob = GitBlob ByteString
+newtype GitTag = GitTag ByteString
     deriving (Show, Eq, Hashable, Binary, NFData)
-type instance RuleResult GitBlob = ByteString
+type instance RuleResult GitTag = ByteString
 
-data GitBlobRule = GitBlobRule GitBlob (Action ())
+data GitTagRule = GitTagRule GitTag (Action ())
 
-blobRule :: ByteString -> Action () -> Rules ()
-blobRule key action = addUserRule $ GitBlobRule (GitBlob key) action
+tagRule :: ByteString -> Action () -> Rules ()
+tagRule key action = addUserRule $ GitTagRule (GitTag key) action
 
-blobNeed :: ByteString -> Action ByteString
-blobNeed = apply1 . GitBlob
+tagNeed :: ByteString -> Action ByteString
+tagNeed = apply1 . GitTag
 
 type GitRules = ReaderT FilePath Rules
 type BranchRules = ReaderT Text GitRules

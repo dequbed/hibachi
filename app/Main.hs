@@ -19,26 +19,13 @@ main = shakeArgs shakeOptions $ do
 
     want ["out/css/default.css"]
 
-    
-{-
- -    "index.html" %> \p -> do
- -        idx <- withRepo "/home/glr/Documents/Blog/posts/" $ 
- -            onBranch "master" $ do
- -                posts <- getPosts
- -                stories <- getStoryPosts
- -                let combined = posts ++ stories
- -                liftAction $ need $ map path combined
- -
- -                return $ generateIndex combined
- -
- -        liftIO $ writeFile p idx
- -}
-
-    withRepo "/home/glr/Documents/Blog/posts/" $ do
-        onBranch "static" $ do
-            indexMatch ["robots.txt"] $ \p -> do
-                c <- gitContent p
-                liftIO $ writeFile p c
-
+    "out/robots.txt" %> \o -> do
+        c <- onBranch "static" $ getGitContents o
+        writeFile' o c
 
     "out/css/default.css" %> \o -> liftIO $ writeFile o styleText
+
+    "out/index.html" %> \_ -> do
+        posts <- onBranch "master" $ getPostsIndex
+        need $ map (\p -> "out/p/" </> p -<.> ".html") posts
+
