@@ -66,6 +66,7 @@ library
         , xdg-basedir
         , shake >= 0.17
         , transformers
+        , lens
     default-extensions:
         OverloadedStrings
     default-language:

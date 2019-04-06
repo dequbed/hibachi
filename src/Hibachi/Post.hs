@@ -35,6 +35,11 @@ import CMark
 
 import Debug.Trace
 
+instance Eq ZonedTime where
+    a == b = (zonedTimeToUTC a) == (zonedTimeToUTC b)
+instance Ord ZonedTime where
+    compare a b = compare (zonedTimeToUTC a) (zonedTimeToUTC b)
+
 data ReadTime = ReadTime
               { numWords :: Int
               , numImages :: Int

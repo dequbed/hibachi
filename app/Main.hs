@@ -15,17 +15,13 @@ import Data.Text.Lazy.IO (writeFile)
 
 main :: IO ()
 main = shakeArgs shakeOptions $ do
-    addBuiltinGitRule
-
-    want ["out/css/default.css"]
-
-    "out/robots.txt" %> \o -> do
-        c <- onBranch "static" $ getGitContents o
-        writeFile' o c
+    want ["out/css/default.css", "out/index.html", "posts"]
 
     "out/css/default.css" %> \o -> liftIO $ writeFile o styleText
 
-    "out/index.html" %> \_ -> do
-        posts <- onBranch "master" $ getPostsIndex
-        need $ map (\p -> "out/p/" </> p -<.> ".html") posts
-
+    "out/index.html" %> \p -> do
+        ps <- liftIO $ indexPosts Nothing "/home/glr/Documents/Blog/posts"
+        liftIO $ writeFile p $ generateIndex ps
+    "posts" ~> do
+        ps <- liftIO $ posts Nothing "/home/glr/Documents/Blog/posts"
+        liftIO $ mapM_ writePost ps

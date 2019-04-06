@@ -6,6 +6,7 @@ import Hibachi.Post
 import Hibachi.Style
 import Hibachi.Index
 import Hibachi.Shake
+import Hibachi.Git
 
 import Data.Time
 
@@ -18,6 +19,7 @@ import Control.Monad.IO.Class
 import Data.Tagged
 import Data.Maybe
 import Data.Either
+import Data.List
 
 import System.FilePath.Posix
 import System.Directory
@@ -28,67 +30,80 @@ import Data.Conduit.List hiding (mapM_, mapM)
 import Data.Text (Text)
 import qualified Data.Text.Lazy as TL
 import Data.ByteString.Char8 (unpack)
+import qualified Data.Text.Lazy.IO as TIO
+
+import qualified Data.Map.Lazy as Map
 
 import CMark
 import Lucid
 
 libmain = do
-    posts "/home/glr/Documents/Blog/posts/"
+    posts Nothing "/home/glr/Documents/Blog/posts/"
 
-posts :: FilePath -> IO ()
-posts path = do
+posts :: Maybe Text -> FilePath -> IO [Post]
+posts lastcommit path = do
     withRepository lgFactory path $ do
         refhead <- resolveReference "refs/heads/posts"
-        -- We don't do a smart check here at the moment. On optimization
-        -- would be to get a list of commits since the last push and only
-        -- re-generate the files that changed since then. That would also
-        -- allow for "hiding" files from the index by deleting them in
-        -- a 2nd commit.
-        c <- lookupCommit $ Tagged $ fromJust refhead
-        t <- lookupTree . commitTree $ c
+        lc <- case lastcommit of
+            Just t -> do
+                o <- parseOid t
+                return $ Just $ Tagged o
+            Nothing -> return $ Nothing
 
-        let author = signatureName $ commitAuthor c
-            time   = signatureWhen $ commitCommitter c
+        let thead = Tagged $ fromJust refhead
+        os <- listCommits lc thead
+        cs <- mapM lookupCommit os
 
-        undefined
+        Prelude.map adjustPath <$> Prelude.concat <$> generateFromCommits cs
 
-generatePosts :: MonadGit r m => Text -> ZonedTime -> Tree r -> m [Either ParseException Post]
-generatePosts author time tree = do
-    runConduit $ sourceTreeBlobEntries tree
-        .| filter topLevelFile
-        .| mapMC (\(p,o,_) -> do
-                c <- catBlobUtf8 o
-                let p2 = "p" </> (unpack p) -<.> "html"
-                return (p2, c)
-            )
-        .| mapC (generatePost author time)
-        .| sinkList
+indexPosts :: Maybe Text -> FilePath -> IO [Post]
+indexPosts lastcommit path = withRepository lgFactory path $ do
+        refhead <- resolveReference "refs/heads/posts"
+        let thead = Tagged $ fromJust refhead
+        c <- lookupCommit thead
+        t <- lookupTree $ commitTree c
+        indexentries <- Prelude.map (\(a,_,_) -> a) <$> treeBlobEntries t
 
-  where topLevelFile (p, _, PlainBlob) = "." == (takeDirectory $ unpack p)
-        topLevelFile _                 = False
+        lc <- case lastcommit of
+            Just t -> do
+                o <- parseOid t
+                return $ Just $ Tagged o
+            Nothing -> return $ Nothing
 
-generateStories :: MonadGit r m => Text -> ZonedTime -> Tree r -> m [Either ParseException Post]
-generateStories author time tree =
-    runConduit $ sourceTreeBlobEntries tree
-        .| filter storyFile
-        .| mapMC (\(p,o,_) -> do
-                c <- catBlobUtf8 o
-                let p2 = "s" </> (unpack p) -<.> "html"
-                return (p2, c)
-            )
-        .| mapC (generatePost author time)
-        .| sinkList
+        os <- listCommits lc thead
+        cs <- mapM lookupCommit os
 
-  where storyFile (p, _, PlainBlob) = "." /= (takeDirectory $ unpack p)
-        storyFile _                 = False
+        allentries <- getModifiedEntriesList cs
 
-{-
- -getPosts :: BranchAction [Post]
- -getPosts = return $ []
- -
- -getStoryPosts :: BranchAction [Post]
- -getStoryPosts = return $ []
- -}
+        liftIO $ print $ length allentries
+        liftIO $ print $ indexentries
+
+        found <- mapM (findWhereModified (reverse allentries)) $ indexentries
+        posts <- Data.Maybe.catMaybes <$> mapM (uncurry toPost) found
+
+        return $ Prelude.map adjustPath $ sortByDate posts
+
+findWhereModified :: MonadGit r m => [(Commit r, [(TreeFilePath, TreeEntry r)])] -> TreeFilePath -> m (Commit r, (TreeFilePath, TreeEntry r)) 
+findWhereModified ((c, tes):aystack) needle = let map = Map.fromList tes in
+    case Map.lookup needle map of
+        Just entry -> return $ (c, (needle, entry))
+        Nothing -> findWhereModified aystack needle
+
+sortByDate :: [Post] -> [Post]
+sortByDate = reverse . sortOn posted
 
 generateIndex :: [Post] -> TL.Text
 generateIndex = renderText . renderIndex
+
+writePost :: Post -> IO ()
+writePost p@(Post{path=path}) = do
+    let outpath = "out" </> dropDrive path
+        outdir = takeDirectory outpath
+    createDirectoryIfMissing True outdir
+    TIO.writeFile outpath $ renderText $ renderPost p
+    return ()
+
+adjustPath :: Post -> Post
+adjustPath p@(Post {path=path}) = let outpath = "/p/" </> path -<.> "html" in
+    p {path=outpath}
+
