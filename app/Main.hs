@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Main where
 
 import Prelude hiding (writeFile)
@@ -17,7 +18,9 @@ import Data.HashMap.Strict (empty)
 
 main :: IO ()
 main = do
-    shakeArgs shakeOptions{ shakeExtra = setRepoPath "/home/glr/Documents/Blog/posts" empty } defs
+    shakeArgs shakeOptions{
+        shakeExtra = setRepoPath "/home/glr/Documents/Blog/posts"
+        empty } defs
 
 defs :: Rules ()
 defs = do
@@ -47,8 +50,9 @@ defs = do
     "stories" ~> do
         liftIO $ print "would build stories here"
 
-    "out/projects.html" ~> do
-        liftIO $ print "would build projects here"
+    "out/projects.html" %> \p -> do
+        idx <- gitBranchIndex "projects"
+        liftIO $ print idx
 
     "out/robots.txt" %> \p -> do
         c <- needVersionedFile "robots.txt" "static"
