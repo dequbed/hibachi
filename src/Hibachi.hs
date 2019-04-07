@@ -75,10 +75,7 @@ indexPosts lastcommit path = withRepository lgFactory path $ do
 
         allentries <- getModifiedEntriesList cs
 
-        liftIO $ print $ length allentries
-        liftIO $ print $ indexentries
-
-        found <- mapM (findWhereModified (reverse allentries)) $ indexentries
+        found <- mapM (findWhereModified (allentries)) $ indexentries
         posts <- Data.Maybe.catMaybes <$> mapM (uncurry toPost) found
 
         return $ Prelude.map adjustPath $ sortByDate posts
