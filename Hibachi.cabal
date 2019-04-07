@@ -26,6 +26,7 @@ executable hibachi
         , Hibachi
         , shake >= 0.17
         , text
+        , unordered-containers
     default-extensions:
         OverloadedStrings
     default-language:
