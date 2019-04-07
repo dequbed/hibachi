@@ -27,9 +27,9 @@ defs = do
          , "out/index.html"
          , "posts"
          , "stories"
-         , "projects"
+         , "out/projects.html"
          , "out/robots.txt"
-        , "out/about.html"
+         , "out/about.html"
          ]
 
     "out/css/default.css" %> \o -> liftIO $ writeFile o styleText
@@ -47,7 +47,7 @@ defs = do
     "stories" ~> do
         liftIO $ print "would build stories here"
 
-    "projects" ~> do
+    "out/projects.html" ~> do
         liftIO $ print "would build projects here"
 
     "out/robots.txt" %> \p -> do
