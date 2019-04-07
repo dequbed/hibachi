@@ -3,6 +3,7 @@
 module Hibachi.Shake
     ( gitRefNeed
     , gitResolveReference
+    , gitBranchIndex
     , setupHibachi
     , setRepoPath
     , getRepoPath
@@ -11,6 +12,8 @@ module Hibachi.Shake
     , needVersionedFile
     )
     where
+
+import Conduit
 
 import Development.Shake
 import Development.Shake.Rule
@@ -98,6 +101,21 @@ gitFileOid (GitFile (path, branch)) = withOurRepository $ do
 
 gitCatFile :: Text -> Action Text
 gitCatFile oid = withOurRepository $ catBlobUtf8 =<< parseObjOid oid
+
+gitBranchIndex :: RefName -> Action [(TreeFilePath, RefOid)]
+gitBranchIndex branch = withOurRepository $ do
+    refhead <- resolveReference $ "refs/heads/" <> branch
+    c <- case refhead of
+        Just p -> lookupCommit $ Tagged $ p
+        Nothing -> error $ "Branch " ++ T.unpack branch ++ "does not exist."
+    t <- lookupTree $ commitTree c
+    runConduit $ sourceTreeEntries t
+        .| awaitForever blobfilter
+        .| mapC (\(p,o) -> (p, renderObjOid o))
+        .| sinkList
+  where
+        blobfilter (path, (BlobEntry oid _)) = yield (path, oid)
+        blobfilter _ = return ()
 
 setupHibachi :: Rules ()
 setupHibachi = do

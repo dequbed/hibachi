@@ -44,6 +44,8 @@ library
           Hibachi.Index
           Hibachi.Style
           Hibachi.Shake
+          Hibachi.Templates
+          Hibachi.ReadTime
 
     build-depends:
           base >=4.12 && <4.13
