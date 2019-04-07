@@ -100,6 +100,9 @@ writePost p@(Post{path=path}) = do
     TIO.writeFile outpath $ renderText $ renderPost p
     return ()
 
+hrenderText :: Html () -> TL.Text
+hrenderText = renderText
+
 adjustPath :: Post -> Post
 adjustPath p@(Post {path=path}) = let outpath = "/p/" </> path -<.> "html" in
     p {path=outpath}

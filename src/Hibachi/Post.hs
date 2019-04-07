@@ -7,6 +7,8 @@ module Hibachi.Post
 
     , renderIndex
 
+    , renderAbout
+
     , calculateReadTime
     , ParseException
     )
@@ -48,12 +50,12 @@ data ReadTime = ReadTime
 instance Show ReadTime where
     show r@(ReadTime w i) =
         let m = minutesReadTime r in
-            if m <= 1 -- Our algorithm would read "0/1 minutes read"
+            (if m <= 1 -- Our algorithm would read "0/1 minutes read"
                 then "1 minute read ("
-                else (show m) ++ " minutes read ("
+                else (show m) ++ " minutes read (")
             ++ (show w) ++ " words" ++
             -- Don't mention images if there are none
-            if i /= 0 then " and " ++ (show i) ++ "images)" else ")"
+            (if i /= 0 then " and " ++ (show i) ++ "images)" else ")")
 
 addTime :: ReadTime -> ReadTime -> ReadTime
 addTime (ReadTime mw mi) (ReadTime nw ni) = ReadTime (mw + nw) (mi + ni)
@@ -144,6 +146,18 @@ renderPost p = do
                 postHeader (title$metadata p) (preadTime p)
                 renderContent $ (content p)
                 postFooter (posted p) (tags$metadata p) (author p)
+
+renderAbout :: Text -> Html ()
+renderAbout about = do
+    doctype_
+    html_ [lang_ "en"] $ do
+        htmlHead "Gregor 'dequbed' Reitzenstein" "" ["Blog", "dequbed"]
+        htmlBody $ do
+            div_ [class_ "post"]
+                $ renderContent
+                $ apply dropHeadingLevel
+                $ commonmarkToNode [optSmart, optNormalize] about
+
 
 renderIndex :: [Post] -> Html ()
 renderIndex ps = do
