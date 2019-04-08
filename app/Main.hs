@@ -50,7 +50,7 @@ defs = do
     "stories" ~> do
         liftIO $ print "would build stories here"
 
-    "out/projects.html" %> \p -> do
+    "out/projects/index.html" %> \p -> do
         idx <- gitBranchIndex "projects"
         liftIO $ print idx
 

@@ -74,6 +74,11 @@ type instance RuleResult GitFile = Text
 needVersionedFile :: FilePath -> Text -> Action Text
 needVersionedFile a b = apply1 $ curry GitFile a b
 
+needProject :: String -> Action Post
+needProject name = do
+    let path = name <.> "md"
+    content <- needVersionedFile path "projects"
+
 addBuiltinGitFileRule :: Rules ()
 addBuiltinGitFileRule = addBuiltinRule noLint noIdentity run
     where
