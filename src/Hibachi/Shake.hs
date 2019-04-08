@@ -67,12 +67,12 @@ gitResolveReference (GitRef ref) = withOurRepository $ do
     refhead <- resolveReference ref
     return $ renderOid $ fromJust refhead
 
-newtype GitFile = GitFile (FilePath, Text) 
+newtype GitFile = GitFile (Text, FilePath) 
     deriving (Show, Eq, Hashable, Binary, NFData)
 type instance RuleResult GitFile = Text
 
-needVersionedFile :: FilePath -> Text -> Action Text
-needVersionedFile a b = apply1 $ curry GitFile a b
+needVersionedFile :: Text -> FilePath -> Action Text
+needVersionedFile branch path = apply1 $ curry GitFile branch path
 
 needProject :: String -> Action Post
 needProject name = do
@@ -93,7 +93,7 @@ addBuiltinGitFileRule = addBuiltinRule noLint noIdentity run
                 return $ RunResult ChangedRecomputeDiff now' content
 
 gitFileOid :: GitFile -> Action Text
-gitFileOid (GitFile (path, branch)) = withOurRepository $ do
+gitFileOid (GitFile (branch, path)) = withOurRepository $ do
     refhead <- resolveReference $ "refs/heads/" <> branch
     c <- case refhead of
         Just p -> lookupCommit $ Tagged $ p

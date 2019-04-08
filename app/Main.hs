@@ -55,9 +55,9 @@ defs = do
         liftIO $ print idx
 
     "out/robots.txt" %> \p -> do
-        c <- needVersionedFile "robots.txt" "static"
+        c <- needVersionedFile "static" "robots.txt"
         liftIO $ TIO.writeFile p c
 
     "out/about.html" %> \p -> do
-        c <- needVersionedFile "about.md" "static"
+        c <- needVersionedFile "static" "about.md"
         liftIO $ writeFile p $ hrenderText $ renderAbout c
