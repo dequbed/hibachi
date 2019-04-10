@@ -120,7 +120,7 @@ navbar = do
         backgroundColor "#50556c"
         boxShadow . pure $ bsColor (rgba 0 0 0 0.3) $ shadowWithBlur (px 0) (px 1) (px 5)
         "will-change" -: "transform"
-        transition "transform" (ms 300) ease none
+        transition "transform" (ms 200) ease (transitionDelay 0)
         justifyContent center
         display flex
         flexDirection column
@@ -133,7 +133,6 @@ navbar = do
         height (rem 3)
         textAlign center
         cursor pointer
-        "will-change" -: "transform"
         transition "transform" (ms 300) ease none
 
     ".mobile-bar" |> label#after ? do
