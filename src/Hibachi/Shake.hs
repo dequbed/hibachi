@@ -1,9 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Hibachi.Shake
     ( gitRefNeed
     , gitResolveReference
     , gitBranchIndex
+    , gitBranchRawIndex
     , setupHibachi
     , setRepoPath
     , getRepoPath
@@ -74,10 +76,12 @@ type instance RuleResult GitFile = Text
 needVersionedFile :: Text -> FilePath -> Action Text
 needVersionedFile branch path = apply1 $ curry GitFile branch path
 
-needProject :: String -> Action Post
-needProject name = do
-    let path = name <.> "md"
-    content <- needVersionedFile path "projects"
+{-
+ -needProject :: String -> Action Post
+ -needProject name = do
+ -    let path = name <.> "md"
+ -    content <- needVersionedFile path "projects"
+ -}
 
 addBuiltinGitFileRule :: Rules ()
 addBuiltinGitFileRule = addBuiltinRule noLint noIdentity run
@@ -121,6 +125,21 @@ gitBranchIndex branch = withOurRepository $ do
   where
         blobfilter (path, (BlobEntry oid _)) = yield (path, oid)
         blobfilter _ = return ()
+
+gitBranchRawIndex :: RefName -> Action [(TreeFilePath, RefOid)]
+gitBranchRawIndex branch = withOurRepository $ do
+    refhead <- resolveReference $ "refs/heads/" <> branch
+    c <- case refhead of
+        Just p -> lookupCommit $ Tagged $ p
+        Nothing -> error $ "Branch " ++ T.unpack branch ++ "does not exist."
+    t <- lookupTree $ commitTree c
+    runConduit $ sourceTreeEntries t
+        .| mapC (\(p,e) -> (p, render e))
+        .| sinkList
+
+render (BlobEntry o _) = "Blob: " <> renderObjOid o
+render (TreeEntry o)   = "Tree: " <> renderObjOid o
+render (CommitEntry o) = "Commit: " <> renderObjOid o
 
 setupHibachi :: Rules ()
 setupHibachi = do

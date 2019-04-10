@@ -18,19 +18,21 @@ import Data.HashMap.Strict (empty)
 
 main :: IO ()
 main = do
-    shakeArgs shakeOptions{
-        shakeExtra = setRepoPath "/home/glr/Documents/Blog/posts"
-        empty } defs
+    shakeArgs shakeOptions
+        { shakeExtra = setRepoPath "/home/glr/Documents/Blog/posts"
+            empty
+        , shakeVersion = "0.1.0"
+        } defs
 
 defs :: Rules ()
-defs = do
+defs = versioned 1 $ do
     setupHibachi
 
     want [ "out/css/default.css"
          , "out/index.html"
          , "posts"
          , "stories"
-         , "out/projects.html"
+         --, "out/projects.html"
          , "out/robots.txt"
          , "out/about.html"
          ]
@@ -48,7 +50,8 @@ defs = do
         liftIO $ mapM_ writePost ps
 
     "stories" ~> do
-        liftIO $ print "would build stories here"
+        idx <- gitBranchRawIndex "posts"
+        liftIO $ print idx
 
     "out/projects/index.html" %> \p -> do
         idx <- gitBranchIndex "projects"
