@@ -2,15 +2,9 @@
 
 module Hibachi.Post
     ( Post(..)
-    , renderPost
+    , PostCommon(..)
+    , PostError
     , generatePost
-
-    , renderIndex
-
-    , renderAbout
-
-    , calculateReadTime
-    , ParseException
     )
     where
 
@@ -24,46 +18,86 @@ import Data.Text (Text, intercalate, pack, words, lines, unlines)
 import Data.Text.Encoding (encodeUtf8)
 
 import Data.Maybe
+import Data.Either.Combinators
 import Data.Time
 import Data.Yaml
+
+import qualified Data.ByteString.Char8 as BS
 
 import System.FilePath.Posix
 
 import CMark
 
-import Hibachi.Templates
 import Hibachi.ReadTime
 
-data Metadata = Metadata
-              { title :: Text
-              , abstract :: Text
-              , tags :: [Text]
-              } deriving (Eq, Show, Generic)
-instance FromJSON Metadata
+import Git (TreeFilePath)
 
-data Post = Post
-          { author :: Text
-          , keywords :: [Text]
+type Author = Text
 
-          , preadTime :: ReadTime
+data Post = PlainPost PostCommon
+          | Story
+            { prev :: [PostCommon]
+            , this :: PostCommon
+            , succ :: [PostCommon]
+            }
 
-          , metadata :: Metadata
-          , content :: Node
+data PostCommon = PostCommon
+                { postAuthor :: Author
+                , postKeywords :: [Text]
+                , postTags :: [Text]
+                , postReadTime :: ReadTime
 
-          , posted :: ZonedTime
+                , postTitle :: Node
+                , postAbstract :: Node
+                , postContent :: Node
 
-          , path :: FilePath
-          } deriving (Show)
+                , postPostedTime :: ZonedTime
+                , postGitPath :: TreeFilePath
+                , postLinkPath :: FilePath --- The path a href needs to point to
+                }
 
-generatePost :: Text -> ZonedTime -> (FilePath, Text) -> Either ParseException Post
-generatePost author time (path, rawcontent) = do
-    (m,n) <- parsePostFile rawcontent
+data FileMetadata = FileMetadata
+                  { title :: Text
+                  , abstract :: Text
+                  , tags :: [Text]
+                  , keywords :: [Text]
+                  , part :: Maybe Int
+                  } deriving (Eq, Show, Generic)
+instance FromJSON FileMetadata
 
-    let nx = apply dropHeadingLevel n
+data PostError = YamlErr ParseException
+    deriving Show
+fromParseException :: ParseException -> PostError
+fromParseException = YamlErr
 
-    Right $ Post author ["Blog"] (calculateReadTime nx) m nx time path
+generatePost :: Author -> ZonedTime -> TreeFilePath -> Text -> Either PostError Post
+generatePost author postedTime path filecontent =
+    PlainPost <$> generateCommon author postedTime path filecontent
 
-parsePostFile :: Text -> Either ParseException (Metadata, Node)
+generateStory :: Author -> ZonedTime -> TreeFilePath -> [PostCommon] -> [PostCommon] -> Text -> Either PostError Post
+generateStory author postedTime path prev next filecontent = do
+    common <- generateCommon author postedTime path filecontent
+    return $ Story prev common next
+
+generateCommon :: Author -> ZonedTime -> TreeFilePath -> Text -> Either PostError PostCommon
+generateCommon author postedTime path filecontent = do
+    (m, content) <- mapLeft fromParseException $ parsePostFile filecontent
+    let content' = apply dropHeadingLevel content
+    Right $ PostCommon
+        author
+        (keywords m)
+        (tags m)
+        (calculateReadTime content')
+        (commonmarkToNode [optSmart] $ title m)
+        (commonmarkToNode [optSmart] $ abstract m)
+        content'
+        postedTime
+        path
+        (toLinkPath path)
+
+toLinkPath = BS.unpack
+
+parsePostFile :: Text -> Either ParseException (FileMetadata, Node)
 parsePostFile c = do
     let (mt, ct) = splitMeta c
         n = commonmarkToNode [optSourcePos, optNormalize, optSmart] ct
@@ -75,6 +109,9 @@ splitMeta c = case lines c of
     ("---":xs) -> (unlines $ takeWhile (/= "...") xs, unlines $ tail $ dropWhile (/= "...") xs)
     (x:xs) -> ("", unlines (x:xs))
 
+apply :: (Node -> Node) -> Node -> Node
+apply f n = let (Node p t ns) = f n in
+    Node p t $ map (apply f) ns
 
 calculateReadTime :: Node -> ReadTime
 calculateReadTime (Node _ nt ns) = foldr (addTime . calculateReadTime) (calculateReadTime' nt) ns
@@ -97,45 +134,3 @@ dropHeadingLevel' nt          = nt
 
 dropHeadingLevel :: Node -> Node
 dropHeadingLevel (Node p t ns) = Node p (dropHeadingLevel' t) ns
-
-renderPost :: Post -> Html ()
-renderPost p = do
-    doctype_ 
-    html_ [lang_ "en"] $ do
-        htmlHead (author p) (abstract$metadata p) (keywords p)
-        htmlBody $ do
-            article_ [class_ "post"] $ do
-                postHeader (title$metadata p) (preadTime p)
-                renderContent $ (content p)
-                postFooter (posted p) (tags$metadata p) (author p)
-
-renderAbout :: Text -> Html ()
-renderAbout about = do
-    doctype_
-    html_ [lang_ "en"] $ do
-        htmlHead "Gregor 'dequbed' Reitzenstein" "" ["Blog", "dequbed"]
-        htmlBody $ do
-            div_ [class_ "post"]
-                $ renderContent
-                $ apply dropHeadingLevel
-                $ commonmarkToNode [optSmart, optNormalize] about
-
-
-renderIndex :: [Post] -> Html ()
-renderIndex ps = do
-    doctype_ 
-    html_ [lang_ "en"] $ do
-        htmlHead mempty mempty mempty :: Html ()
-        htmlBody $ mapM_ renderShortPostlink ps
-
-renderPostlink :: Post -> Html ()
-renderPostlink p = a_ [class_ "postlink", href_ (pack $ path p)] $ article_ [class_ "post"] $ do
-    postHeader (title$metadata p) (preadTime p)
-    toHtmlRaw $ commonmarkToHtml [optSmart, optNormalize] (abstract$metadata p)
-    postFooter (posted p) (tags$metadata p) (author p)
-
-renderShortPostlink :: Post -> Html ()
-renderShortPostlink p = a_ [class_ "postlink", href_ (pack $ path p)] $ article_ [class_ "post"] $ do
-    postShortHeader (title$metadata p)
-    toHtmlRaw $ commonmarkToHtml [optSmart, optNormalize] (abstract$metadata p)
-    postFooter (posted p) (tags$metadata p) (author p)

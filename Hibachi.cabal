@@ -27,6 +27,8 @@ executable hibachi
         , shake >= 0.17
         , text
         , unordered-containers
+        , directory
+        , filepath
     default-extensions:
         OverloadedStrings
     default-language:
@@ -49,6 +51,7 @@ library
 
     build-depends:
           base >=4.12 && <4.13
+        , either
         , containers
         , bytestring
         , unordered-containers

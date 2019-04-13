@@ -5,7 +5,7 @@ module Hibachi.Shake
     ( gitRefNeed
     , gitResolveReference
     , gitBranchIndex
-    , gitBranchRawIndex
+    , gitBranchStories
     , setupHibachi
     , setRepoPath
     , getRepoPath
@@ -126,20 +126,33 @@ gitBranchIndex branch = withOurRepository $ do
         blobfilter (path, (BlobEntry oid _)) = yield (path, oid)
         blobfilter _ = return ()
 
-gitBranchRawIndex :: RefName -> Action [(TreeFilePath, RefOid)]
-gitBranchRawIndex branch = withOurRepository $ do
+gitBranchStories :: RefName -> Action [(TreeFilePath, [TreeFilePath])]
+gitBranchStories branch = withOurRepository $ do
     refhead <- resolveReference $ "refs/heads/" <> branch
     c <- case refhead of
         Just p -> lookupCommit $ Tagged $ p
         Nothing -> error $ "Branch " ++ T.unpack branch ++ "does not exist."
     t <- lookupTree $ commitTree c
     runConduit $ sourceTreeEntries t
-        .| mapC (\(p,e) -> (p, render e))
+        .| awaitForever treefilter
+        .| mapMC (\(p,e) -> do
+            t <- lookupTree e
+            return (p, t)
+            )
+        .| mapMC (\(p,t) -> do
+            s <- gitStories t
+            return (p, s)
+            )
         .| sinkList
+  where
+        treefilter (path, (TreeEntry oid)) = yield (path, oid)
+        treefilter _ = return ()
 
-render (BlobEntry o _) = "Blob: " <> renderObjOid o
-render (TreeEntry o)   = "Tree: " <> renderObjOid o
-render (CommitEntry o) = "Commit: " <> renderObjOid o
+gitStories :: MonadGit r m => Tree r -> m [TreeFilePath]
+gitStories tree = do
+    runConduit $ sourceTreeEntries tree
+        .| mapC fst
+        .| sinkList
 
 setupHibachi :: Rules ()
 setupHibachi = do
@@ -159,3 +172,5 @@ getRepoPath = do
 withOurRepository f = do
     repopath <- getRepoPath
     liftIO $ withRepository lgFactory repopath f
+
+liftSnd f (a,b) = (a, f b)

@@ -75,15 +75,14 @@ getModifiedPostsList :: MonadGit r m => [Commit r] -> m [(Commit r, [Post])]
 getModifiedPostsList cs = toModifiedPostsList =<< (getModifiedEntriesList cs)
 
 toPost :: MonadGit r m => Commit r -> (TreeFilePath, TreeEntry r) -> m (Maybe Post)
-toPost c (rpath, entry) = do
+toPost c (path, entry) = do
     let author = signatureName $ commitAuthor c
         time   = signatureWhen $ commitCommitter c
-        path   = unpack rpath
 
     case entry of
         (BlobEntry oid _) -> do
             rawcontent <- catBlobUtf8 oid
-            case generatePost author time (path, rawcontent) of
+            case generatePost author time path rawcontent of
                 Left _ -> return Nothing
                 Right p -> return $ Just p
         _ -> return Nothing

@@ -10,6 +10,7 @@ module Hibachi.Templates
     where
 
 import Hibachi.ReadTime
+import Hibachi.Post
 
 import CMark
 import Lucid
@@ -25,6 +26,47 @@ import Data.Maybe
 
 import System.FilePath.Posix
 
+renderPost :: Post -> Html ()
+renderPost p = do
+    doctype_ 
+    html_ [lang_ "en"] $ do
+        htmlHead (author p) (abstract$metadata p) (keywords p)
+        htmlBody $ do
+            article_ [class_ "post"] $ do
+                postHeader (title$metadata p) (preadTime p)
+                renderContent $ (content p)
+                postFooter (posted p) (tags$metadata p) (author p)
+
+renderAbout :: Text -> Html ()
+renderAbout about = do
+    doctype_
+    html_ [lang_ "en"] $ do
+        htmlHead "Gregor 'dequbed' Reitzenstein" "" ["Blog", "dequbed"]
+        htmlBody $ do
+            div_ [class_ "post"]
+                $ renderContent
+                $ apply dropHeadingLevel
+                $ commonmarkToNode [optSmart, optNormalize] about
+
+
+renderIndex :: [Post] -> Html ()
+renderIndex ps = do
+    doctype_ 
+    html_ [lang_ "en"] $ do
+        htmlHead mempty mempty mempty :: Html ()
+        htmlBody $ mapM_ renderShortPostlink ps
+
+renderPostlink :: Post -> Html ()
+renderPostlink p = a_ [class_ "postlink", href_ (pack $ path p)] $ article_ [class_ "post"] $ do
+    postHeader (title$metadata p) (preadTime p)
+    toHtmlRaw $ commonmarkToHtml [optSmart, optNormalize] (abstract$metadata p)
+    postFooter (posted p) (tags$metadata p) (author p)
+
+renderShortPostlink :: Post -> Html ()
+renderShortPostlink p = a_ [class_ "postlink", href_ (pack $ path p)] $ article_ [class_ "post"] $ do
+    postShortHeader (title$metadata p)
+    toHtmlRaw $ commonmarkToHtml [optSmart, optNormalize] (abstract$metadata p)
+    postFooter (posted p) (tags$metadata p) (author p)
 
 apply :: (Node -> Node) -> Node -> Node
 apply f n = let (Node p t ns) = f n in

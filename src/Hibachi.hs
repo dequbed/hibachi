@@ -1,4 +1,13 @@
-module Hibachi where
+module Hibachi
+    ( module Lucid
+    , indexPosts
+    , hrenderText
+    , test
+    , generateIndex
+    , posts
+    , writePost
+    )
+where
 
 import Prelude hiding (filter, writeFile)
 
@@ -14,6 +23,7 @@ import Git
 import Git.Tree.Working
 import Git.Libgit2 (lgFactory)
 
+import Control.Monad
 import Control.Monad.IO.Class
 
 import Data.Tagged
@@ -26,6 +36,7 @@ import System.Directory
 
 import Conduit
 import Data.Conduit.List hiding (mapM_, mapM)
+import qualified Data.Conduit.Combinators as CC
 
 import Data.Text (Text)
 import qualified Data.Text.Lazy as TL
@@ -39,6 +50,62 @@ import Lucid
 
 libmain = do
     posts Nothing "/home/glr/Documents/Blog/posts/"
+
+type CommitMeta = (Text, ZonedTime)
+type Latest = Map.Map TreeFilePath (CommitMeta, Text)
+insertLatestModified :: TreeFilePath -> (CommitMeta, Text) -> Latest -> Latest
+insertLatestModified = Map.insertWith const
+type First = Map.Map TreeFilePath CommitMeta
+insertFirstModified :: TreeFilePath -> CommitMeta -> First -> First
+insertFirstModified = Map.insertWith seq
+
+data History = History 
+             { firstPostedMap :: First
+             , latestUpdateMap :: Latest
+             }
+
+buildHistory :: MonadGit r m => History -> Commit r -> m History
+buildHistory h commit = do
+    tree <- lookupTree $ commitTree commit
+    runConduit $ sourceTreeBlobEntries tree
+        .| CC.foldM (updateHistory (author, ctime)) h
+  where
+    ctime = signatureWhen $ commitCommitter commit
+    author = signatureAuthor $ commitAuthor commit
+    updateHistory :: MonadGit r m => CommitMeta -> History -> (TreeFilePath, BlobOid r, BlobKind) -> m History
+    updateHistory meta (History f l) (path, oid, _) = do
+        let toid = renderObjOid oid
+        let l' = insertLatestModified path (meta, toid) l
+            f' = insertFirstModified path meta f
+        return $ History f' l'
+
+buildPost :: MonadGit r m => History -> TreeFilePath -> m Either PostError Post
+buildPost (History f l) path = do
+    let (author, postedTime) = f ! path
+        (_, toid) = l ! path
+    oid <- parseObjOid toid
+    content <- catBlobUtf8 oid
+    return $ generatePost author postedTime path content
+
+testF :: MonadGit r m => [Commit r] -> m (Latest, First)
+testF = Control.Monad.foldM buildHistory (Map.empty, Map.empty)
+
+test :: Maybe Text -> FilePath -> IO ()
+test lastcommit path = withRepository lgFactory path $ do
+    refhead <- resolveReference "refs/heads/posts"
+    lc <- case lastcommit of
+        Just t -> do
+            o <- parseOid t
+            return $ Just $ Tagged o
+        Nothing -> return $ Nothing
+
+    let thead = Tagged $ fromJust refhead
+    os <- listCommits lc thead
+    cs <- mapM lookupCommit os
+    out <- testF cs
+
+    liftIO $ print $ out
+
 
 posts :: Maybe Text -> FilePath -> IO [Post]
 posts lastcommit path = do
