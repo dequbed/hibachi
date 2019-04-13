@@ -1,11 +1,6 @@
 module Hibachi
     ( module Lucid
-    , indexPosts
     , hrenderText
-    , test
-    , generateIndex
-    , posts
-    , writePost
     )
 where
 
@@ -35,7 +30,6 @@ import System.FilePath.Posix
 import System.Directory
 
 import Conduit
-import Data.Conduit.List hiding (mapM_, mapM)
 import qualified Data.Conduit.Combinators as CC
 
 import Data.Text (Text)
@@ -47,9 +41,6 @@ import qualified Data.Map.Lazy as Map
 
 import CMark
 import Lucid
-
-libmain = do
-    posts Nothing "/home/glr/Documents/Blog/posts/"
 
 type CommitMeta = (Text, ZonedTime)
 type Latest = Map.Map TreeFilePath (CommitMeta, Text)
@@ -64,14 +55,23 @@ data History = History
              , latestUpdateMap :: Latest
              }
 
-buildHistory :: MonadGit r m => History -> Commit r -> m History
-buildHistory h commit = do
+empty :: History
+empty = History Map.empty Map.empty
+
+buildHistory :: MonadGit r m => Maybe (History, CommitOid r) -> CommitOid r -> m History
+buildHistory (Just (hist, have)) need =
+    foldM buildHistoryStep hist =<< mapM lookupCommit =<< listCommits (Just have) need
+buildHistory Nothing need =
+    foldM buildHistoryStep empty =<< mapM lookupCommit =<< listCommits Nothing need
+
+buildHistoryStep :: MonadGit r m => History -> Commit r -> m History
+buildHistoryStep h commit = do
     tree <- lookupTree $ commitTree commit
     runConduit $ sourceTreeBlobEntries tree
         .| CC.foldM (updateHistory (author, ctime)) h
   where
     ctime = signatureWhen $ commitCommitter commit
-    author = signatureAuthor $ commitAuthor commit
+    author = signatureName $ commitAuthor commit
     updateHistory :: MonadGit r m => CommitMeta -> History -> (TreeFilePath, BlobOid r, BlobKind) -> m History
     updateHistory meta (History f l) (path, oid, _) = do
         let toid = renderObjOid oid
@@ -79,98 +79,36 @@ buildHistory h commit = do
             f' = insertFirstModified path meta f
         return $ History f' l'
 
-buildPost :: MonadGit r m => History -> TreeFilePath -> m Either PostError Post
-buildPost (History f l) path = do
-    let (author, postedTime) = f ! path
-        (_, toid) = l ! path
+--buildPost :: MonadGit r m => History -> TreeFilePath -> m (Either PostError Post)
+buildPost h p = do
+    c <- buildCommon h p
+    return $ PlainPost <$> c
+
+buildCommon (History f l) path = do
+    let (author, postedTime) = f Map.! path
+        (_, toid) = l Map.! path
     oid <- parseObjOid toid
     content <- catBlobUtf8 oid
-    return $ generatePost author postedTime path content
+    return $ generateCommon author postedTime path content
 
-testF :: MonadGit r m => [Commit r] -> m (Latest, First)
-testF = Control.Monad.foldM buildHistory (Map.empty, Map.empty)
+buildStories hist tree = do
+    (path, _, _) <- unzip3 <$> treeBlobEntries tree
+    stories <- mapM (buildCommon hist) path
+    return $ walkStories $ rights stories
 
-test :: Maybe Text -> FilePath -> IO ()
-test lastcommit path = withRepository lgFactory path $ do
-    refhead <- resolveReference "refs/heads/posts"
-    lc <- case lastcommit of
-        Just t -> do
-            o <- parseOid t
-            return $ Just $ Tagged o
-        Nothing -> return $ Nothing
+walkStories :: [PostCommon] -> [Post]
+walkStories xs = walkStories' [] xs []
 
-    let thead = Tagged $ fromJust refhead
-    os <- listCommits lc thead
-    cs <- mapM lookupCommit os
-    out <- testF cs
+walkStories' :: [PostCommon] -> [PostCommon] -> [Post] -> [Post]
+walkStories' _    []          a = a
+walkStories' prev (this:next) a = walkStories' (prev ++ [this]) next (a ++ [Story prev this next])
 
-    liftIO $ print $ out
-
-
-posts :: Maybe Text -> FilePath -> IO [Post]
-posts lastcommit path = do
-    withRepository lgFactory path $ do
-        refhead <- resolveReference "refs/heads/posts"
-        lc <- case lastcommit of
-            Just t -> do
-                o <- parseOid t
-                return $ Just $ Tagged o
-            Nothing -> return $ Nothing
-
-        let thead = Tagged $ fromJust refhead
-        os <- listCommits lc thead
-        cs <- mapM lookupCommit os
-
-        Prelude.map adjustPath <$> Prelude.concat <$> generateFromCommits cs
-
-indexPosts :: Maybe Text -> FilePath -> IO [Post]
-indexPosts lastcommit path = withRepository lgFactory path $ do
-        refhead <- resolveReference "refs/heads/posts"
-        let thead = Tagged $ fromJust refhead
-        c <- lookupCommit thead
-        t <- lookupTree $ commitTree c
-        indexentries <- Prelude.map (\(a,_,_) -> a) <$> treeBlobEntries t
-
-        lc <- case lastcommit of
-            Just t -> do
-                o <- parseOid t
-                return $ Just $ Tagged o
-            Nothing -> return $ Nothing
-
-        os <- listCommits lc thead
-        cs <- mapM lookupCommit os
-
-        allentries <- getModifiedEntriesList cs
-
-        found <- mapM (findWhereModified (allentries)) $ indexentries
-        posts <- Data.Maybe.catMaybes <$> mapM (uncurry toPost) found
-
-        return $ Prelude.map adjustPath $ sortByDate posts
-
-findWhereModified :: MonadGit r m => [(Commit r, [(TreeFilePath, TreeEntry r)])] -> TreeFilePath -> m (Commit r, (TreeFilePath, TreeEntry r)) 
-findWhereModified ((c, tes):aystack) needle = let map = Map.fromList tes in
-    case Map.lookup needle map of
-        Just entry -> return $ (c, (needle, entry))
-        Nothing -> findWhereModified aystack needle
-
-sortByDate :: [Post] -> [Post]
-sortByDate = reverse . sortOn posted
-
-generateIndex :: [Post] -> TL.Text
-generateIndex = renderText . renderIndex
-
-writePost :: Post -> IO ()
-writePost p@(Post{path=path}) = do
-    let outpath = "out" </> dropDrive path
-        outdir = takeDirectory outpath
-    createDirectoryIfMissing True outdir
-    TIO.writeFile outpath $ renderText $ renderPost p
-    return ()
+sortPostByDate :: [Post] -> [Post]
+sortPostByDate = reverse . sortOn postedTime
+  where postedTime (PlainPost common) = postPostedTime common
+        postedTime (Story _ common _) = postPostedTime common
+sortByDate :: [PostCommon] -> [PostCommon]
+sortByDate = reverse . sortOn postPostedTime
 
 hrenderText :: Html () -> TL.Text
 hrenderText = renderText
-
-adjustPath :: Post -> Post
-adjustPath p@(Post {path=path}) = let outpath = "/p/" </> path -<.> "html" in
-    p {path=outpath}
-

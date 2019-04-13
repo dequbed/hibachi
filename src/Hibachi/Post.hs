@@ -5,6 +5,8 @@ module Hibachi.Post
     , PostCommon(..)
     , PostError
     , generatePost
+    , generateStory
+    , generateCommon
     )
     where
 
@@ -39,7 +41,7 @@ data Post = PlainPost PostCommon
             { prev :: [PostCommon]
             , this :: PostCommon
             , succ :: [PostCommon]
-            }
+            } deriving (Eq, Show, Ord)
 
 data PostCommon = PostCommon
                 { postAuthor :: Author
@@ -54,7 +56,7 @@ data PostCommon = PostCommon
                 , postPostedTime :: ZonedTime
                 , postGitPath :: TreeFilePath
                 , postLinkPath :: FilePath --- The path a href needs to point to
-                }
+                } deriving (Eq, Show, Ord)
 
 data FileMetadata = FileMetadata
                   { title :: Text
