@@ -11,8 +11,10 @@ import System.Directory
 import System.FilePath.Posix
 
 import Hibachi
+import Hibachi.Util
 import Hibachi.Post
 import Hibachi.Style
+import Hibachi.Templates
 
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -35,8 +37,8 @@ defs = versioned 1 $ do
 
     want [ "out/css/default.css"
          , "out/index.html"
-         , "posts"
-         , "stories"
+         --, "posts"
+         --, "stories"
          --, "out/projects.html"
          , "out/robots.txt"
          , "out/about.html"
@@ -46,22 +48,9 @@ defs = versioned 1 $ do
 
     "out/index.html" %> \p -> do
         oid <- gitRefNeed "refs/heads/posts"
-        ps <- liftIO $ indexPosts Nothing "/home/glr/Documents/Blog/posts"
-        liftIO $ writeFile p $ generateIndex ps
-
-    "posts" ~> do
-        liftIO $ test Nothing "/home/glr/Documents/Blog/posts"
-        oid <- gitRefNeed "refs/heads/posts"
-        ps <- liftIO $ posts Nothing "/home/glr/Documents/Blog/posts"
-        liftIO $ mapM_ writePost ps
-
-    "stories" ~> do
-        idx <- gitBranchStories "posts"
-        liftIO $ print idx
-
-    "out/projects/index.html" %> \p -> do
-        idx <- gitBranchIndex "projects"
-        liftIO $ print idx
+        ps <- buildAllAction oid
+        writeFileTL p $ hrenderText $ renderPostIndex ps
+        mapM_ writePost ps
 
     "out/robots.txt" %> \p ->
         writeFileText p =<< needVersionedFile "static" "robots.txt"
@@ -85,3 +74,9 @@ writeFileHtml :: FilePath -> Html () -> Action ()
 writeFileHtml path content = liftIO $ do
     createDirectoryIfMissing True $ takeDirectory path
     TLIO.writeFile path $ hrenderText content
+
+writePost :: Post -> Action ()
+writePost p@(PlainPost (PostCommon{postLinkPath=path})) = inner path p
+writePost p@(Story _ (PostCommon{postLinkPath=path}) _) = inner path p
+inner path p = writeFileTL path $ hrenderText $ renderPost p
+

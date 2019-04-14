@@ -3,6 +3,7 @@
 module Hibachi.Post
     ( Post(..)
     , PostCommon(..)
+    , toCommon
     , PostError
     , generatePost
     , generateStory
@@ -60,11 +61,15 @@ data PostCommon = PostCommon
                 , postLinkPath :: FilePath --- The path a href needs to point to
                 } deriving (Eq, Show, Ord)
 
+toCommon :: Post -> PostCommon
+toCommon (PlainPost c) = c
+toCommon (Story _ c _) = c
+
 data FileMetadata = FileMetadata
                   { title :: Text
                   , abstract :: Text
                   , tags :: [Text]
-                  , keywords :: [Text]
+                  --, keywords :: [Text]
                   , part :: Maybe Int
                   } deriving (Eq, Show, Generic)
 instance FromJSON FileMetadata
@@ -89,7 +94,7 @@ generateCommon author postedTime path filecontent = do
     let content' = apply dropHeadingLevel content
     Right $ PostCommon
         author
-        (keywords m)
+        [] --(keywords m)
         (tags m)
         (calculateReadTime content')
         (commonmarkToNode [optSmart] $ title m)
@@ -99,7 +104,7 @@ generateCommon author postedTime path filecontent = do
         path
         (toLinkPath path)
 
-toLinkPath = BS.unpack
+toLinkPath p = "p" </> BS.unpack p -<.> "html"
 
 parsePostFile :: Text -> Either ParseException (FileMetadata, Node)
 parsePostFile c = do

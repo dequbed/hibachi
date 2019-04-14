@@ -1,22 +1,26 @@
 module Hibachi.Util
     ( History
+    , buildHistory
     , CommitMeta(..)
+    , buildAll
+    , hrenderText
     )
     where
+
+import Control.Monad.Catch (MonadMask)
 
 import Prelude hiding (filter, writeFile)
 
 import Hibachi.Post
 import Hibachi.Style
 import Hibachi.Index
-import Hibachi.Shake
 import Hibachi.Git
 
 import Data.Time
 
 import Git
 import Git.Tree.Working
-import Git.Libgit2 (lgFactory)
+import Git.Libgit2 (lgFactory, LgRepo, HasLgRepo)
 
 import Control.Monad
 import Control.Monad.IO.Class
@@ -34,7 +38,7 @@ import qualified Data.Conduit.Combinators as CC
 
 import Data.Text (Text)
 import qualified Data.Text.Lazy as TL
-import Data.ByteString.Char8 (unpack)
+import Data.ByteString.Char8 (unpack, pack)
 import qualified Data.Text.Lazy.IO as TIO
 
 import qualified Data.Map.Lazy as Map
@@ -53,7 +57,7 @@ insertFirstModified = Map.insertWith seq
 data History = History 
              { firstPostedMap :: First
              , latestUpdateMap :: Latest
-             }
+             } deriving (Eq, Show)
 
 empty :: History
 empty = History Map.empty Map.empty
@@ -79,12 +83,27 @@ buildHistoryStep h commit = do
             f' = insertFirstModified path meta f
         return $ History f' l'
 
---buildPost :: MonadGit r m => History -> TreeFilePath -> m (Either PostError Post)
+buildAll :: (MonadGit r m, MonadIO m, MonadThrow m, MonadMask m, MonadUnliftIO m, HasLgRepo m) => History -> Tree r -> m [Post]
+buildAll hist tree = do
+    storytrees <- runConduit $ sourceTreeEntries tree
+        .| CC.filter (\e -> case e of (_, (TreeEntry _)) -> True ; otherwise -> False)
+        .| CC.map (\e -> case e of (p, (TreeEntry o)) -> (p, o))
+        .| CC.mapM (\(p,o) -> (,) p <$> lookupTree o)
+        .| sinkList
+    posts <- runConduit $ sourceTreeBlobEntries tree
+        .| CC.filter (\(p, _, _) -> takeDirectory (unpack p) == ".")
+        .| sinkList
+
+    ps <- mapM (buildPost hist <$> (\(a,_,_) -> a)) posts
+    ss <- mapM (uncurry (buildStories hist)) storytrees
+    return $ sortPostByDate $ (rights ps) ++ (concat ss)
+
+buildPost :: (MonadGit r m, MonadThrow m, MonadMask m, MonadUnliftIO m, HasLgRepo m) => History -> TreeFilePath -> m (Either PostError Post)
 buildPost h p = do
     c <- buildCommon h p
     return $ PlainPost <$> c
 
---buildCommon :: MonadGit r m => History -> TreeFilePath -> m (Either PostError PostCommon)
+buildCommon :: (MonadGit r m, MonadThrow m, MonadMask m, MonadUnliftIO m, HasLgRepo m) => History -> TreeFilePath -> m (Either PostError PostCommon)
 buildCommon (History f l) path = do
     let (author, postedTime) = f Map.! path
         (_, toid) = l Map.! path
@@ -92,10 +111,10 @@ buildCommon (History f l) path = do
     content <- catBlobUtf8 oid
     return $ generateCommon author postedTime path content
 
---buildStories :: MonadGit r m => History -> Tree r -> m (Either PostError [Post])
-buildStories hist tree = do
+buildStories :: (MonadGit r m, MonadThrow m, MonadMask m, MonadUnliftIO m, HasLgRepo m) => History -> TreeFilePath -> Tree r -> m [Post]
+buildStories hist prefix tree = do
     (path, _, _) <- unzip3 <$> treeBlobEntries tree
-    stories <- mapM (buildCommon hist) path
+    stories <- mapM (buildCommon hist) $ map (\path -> pack $ (unpack $ prefix) </> (unpack $ path)) path
     return $ walkStories $ rights stories
 
 walkStories :: [PostCommon] -> [Post]

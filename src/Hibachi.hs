@@ -1,6 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Hibachi
     ( module Lucid
 
@@ -14,6 +13,8 @@ module Hibachi
     , gitFileOid
     , gitCatFile
     , needVersionedFile
+
+    , buildAllAction
     )
     where
 
@@ -43,6 +44,7 @@ import Git.Types
 import Git.Libgit2 (lgFactory)
 
 import Hibachi.Post
+import Hibachi.Util
 
 type RefOid = Text
 
@@ -178,3 +180,11 @@ withOurRepository f = do
     liftIO $ withRepository lgFactory repopath f
 
 liftSnd f (a,b) = (a, f b)
+
+buildAllAction :: Text -> Action [Post]
+buildAllAction oid = withOurRepository $ do
+    coid <- parseObjOid oid
+    c <- lookupCommit coid
+    t <- lookupTree $ commitTree c
+    h <- buildHistory Nothing coid
+    buildAll h t

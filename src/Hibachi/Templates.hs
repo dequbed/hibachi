@@ -6,6 +6,9 @@ module Hibachi.Templates
     , htmlBody
     , apply
     , renderContent
+    , renderAbout
+    , renderPostIndex
+    , renderPost
     )
     where
 
@@ -50,6 +53,8 @@ renderAbout about = do
                 $ apply dropHeadingLevel
                 $ commonmarkToNode [optSmart, optNormalize] about
 
+renderPostIndex :: [Post] -> Html ()
+renderPostIndex = renderIndex . map toCommon
 
 renderIndex :: [PostCommon] -> Html ()
 renderIndex ps = do
