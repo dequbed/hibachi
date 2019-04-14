@@ -148,9 +148,11 @@ gitBranchStories branch = withOurRepository $ do
         treefilter (path, (TreeEntry oid)) = yield (path, oid)
         treefilter _ = return ()
 
-gitStories :: MonadGit r m => History -> Tree r -> m [TreeFilePath]
+gitStories :: MonadGit r m => Tree r -> m [TreeFilePath]
 gitStories tree = do
-    
+    runConduit $ sourceTreeEntries tree
+        .| mapC fst
+        .| sinkList
 
 setupHibachi :: Rules ()
 setupHibachi = do
