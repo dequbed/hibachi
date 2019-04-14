@@ -64,16 +64,18 @@ renderIndex ps = do
         htmlBody $ mapM_ renderShortPostlink ps
 
 renderPostlink :: PostCommon -> Html ()
-renderPostlink p = a_ [class_ "postlink", href_ (pack $ postLinkPath p)] $ article_ [class_ "post"] $ do
-    postHeader (postTitle p) (postReadTime p)
-    toHtmlRaw $ nodeToHtml [optSmart, optNormalize] (postAbstract p)
-    postFooter (postPostedTime p) (postTags p) (postAuthor p)
+renderPostlink p =
+    a_ [class_ "postlink", href_ (pack $ postLinkPath p)] $ article_ [class_ "post"] $ do
+        postHeader (postTitle p) (postReadTime p)
+        toHtmlRaw $ nodeToHtml [optSmart, optNormalize] (postAbstract p)
+        postFooter (postPostedTime p) (postTags p) (postAuthor p)
 
 renderShortPostlink :: PostCommon -> Html ()
-renderShortPostlink p = a_ [class_ "postlink", href_ (pack $ postLinkPath p)] $ article_ [class_ "post"] $ do
-    postShortHeader (postTitle p)
-    toHtmlRaw $ nodeToHtml [optSmart, optNormalize] (postAbstract p)
-    postFooter (postPostedTime p) (postTags p) (postAuthor p)
+renderShortPostlink p =
+    a_ [class_ "postlink", href_ (pack $ postLinkPath p)] $ article_ [class_ "post"] $ do
+        postShortHeader (postTitle p)
+        toHtmlRaw $ nodeToHtml [optSmart, optNormalize] (postAbstract p)
+        postFooter (postPostedTime p) (postTags p) (postAuthor p)
 
 renderContent :: Node -> Html ()
 renderContent = toHtmlRaw . nodeToHtml [optSmart, optNormalize]

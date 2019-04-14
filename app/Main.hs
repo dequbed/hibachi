@@ -79,4 +79,3 @@ writePost :: Post -> Action ()
 writePost p@(PlainPost (PostCommon{postLinkPath=path})) = inner path p
 writePost p@(Story _ (PostCommon{postLinkPath=path}) _) = inner path p
 inner path p = writeFileTL path $ hrenderText $ renderPost p
-
