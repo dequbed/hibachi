@@ -40,14 +40,14 @@ library
 
     exposed-modules:
           Hibachi
-          Hibachi.Post
-          Hibachi.State
           Hibachi.Git
           Hibachi.Index
-          Hibachi.Style
-          Hibachi.Shake
-          Hibachi.Templates
+          Hibachi.Post
           Hibachi.ReadTime
+          Hibachi.State
+          Hibachi.Style
+          Hibachi.Templates
+          Hibachi.Util
 
     build-depends:
           base >=4.12 && <4.13

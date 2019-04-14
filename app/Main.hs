@@ -11,7 +11,6 @@ import System.Directory
 import System.FilePath.Posix
 
 import Hibachi
-import Hibachi.Shake
 import Hibachi.Post
 import Hibachi.Style
 
