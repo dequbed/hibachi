@@ -27,15 +27,17 @@ import Data.Maybe
 import System.FilePath.Posix
 
 renderPost :: Post -> Html ()
-renderPost p = do
+renderPost (PlainPost p) = renderPost' p
+renderPost (Story _ this _) = renderPost' this
+renderPost' p = do
     doctype_ 
     html_ [lang_ "en"] $ do
-        htmlHead (author p) (abstract$metadata p) (keywords p)
+        htmlHead (postAuthor p) (nodeToHtml [optSmart, optNormalize] $ postAbstract p) (postKeywords p)
         htmlBody $ do
             article_ [class_ "post"] $ do
-                postHeader (title$metadata p) (preadTime p)
-                renderContent $ (content p)
-                postFooter (posted p) (tags$metadata p) (author p)
+                postHeader (postTitle p) (postReadTime p)
+                renderContent $ (postContent p)
+                postFooter (postPostedTime p) (postTags p) (postAuthor p)
 
 renderAbout :: Text -> Html ()
 renderAbout about = do
@@ -49,28 +51,24 @@ renderAbout about = do
                 $ commonmarkToNode [optSmart, optNormalize] about
 
 
-renderIndex :: [Post] -> Html ()
+renderIndex :: [PostCommon] -> Html ()
 renderIndex ps = do
-    doctype_ 
+    doctype_
     html_ [lang_ "en"] $ do
         htmlHead mempty mempty mempty :: Html ()
         htmlBody $ mapM_ renderShortPostlink ps
 
-renderPostlink :: Post -> Html ()
-renderPostlink p = a_ [class_ "postlink", href_ (pack $ path p)] $ article_ [class_ "post"] $ do
-    postHeader (title$metadata p) (preadTime p)
-    toHtmlRaw $ commonmarkToHtml [optSmart, optNormalize] (abstract$metadata p)
-    postFooter (posted p) (tags$metadata p) (author p)
+renderPostlink :: PostCommon -> Html ()
+renderPostlink p = a_ [class_ "postlink", href_ (pack $ postLinkPath p)] $ article_ [class_ "post"] $ do
+    postHeader (postTitle p) (postReadTime p)
+    toHtmlRaw $ nodeToHtml [optSmart, optNormalize] (postAbstract p)
+    postFooter (postPostedTime p) (postTags p) (postAuthor p)
 
-renderShortPostlink :: Post -> Html ()
-renderShortPostlink p = a_ [class_ "postlink", href_ (pack $ path p)] $ article_ [class_ "post"] $ do
-    postShortHeader (title$metadata p)
-    toHtmlRaw $ commonmarkToHtml [optSmart, optNormalize] (abstract$metadata p)
-    postFooter (posted p) (tags$metadata p) (author p)
-
-apply :: (Node -> Node) -> Node -> Node
-apply f n = let (Node p t ns) = f n in
-    Node p t $ map (apply f) ns
+renderShortPostlink :: PostCommon -> Html ()
+renderShortPostlink p = a_ [class_ "postlink", href_ (pack $ postLinkPath p)] $ article_ [class_ "post"] $ do
+    postShortHeader (postTitle p)
+    toHtmlRaw $ nodeToHtml [optSmart, optNormalize] (postAbstract p)
+    postFooter (postPostedTime p) (postTags p) (postAuthor p)
 
 renderContent :: Node -> Html ()
 renderContent = toHtmlRaw . nodeToHtml [optSmart, optNormalize]
@@ -126,16 +124,16 @@ parToH1' nt = nt
 parToH1 :: Node -> Node
 parToH1 (Node p t ns) = Node p (parToH1' t) ns
 
-postHeader :: Text -> ReadTime -> Html ()
+postHeader :: Node -> ReadTime -> Html ()
 postHeader title time = do
     header_ $ do
-        toHtmlRaw $ nodeToHtml [] $ apply parToH1 $ commonmarkToNode [optSmart] title
+        toHtmlRaw $ nodeToHtml [] $ apply parToH1 title
         div_ [class_ "readtime"] $ do
             span_ [class_ "far fa-clock fa-sm"] ""
             toHtml $ " " ++ show time
 
-postShortHeader :: Text -> Html ()
-postShortHeader = header_ . toHtmlRaw . nodeToHtml [] . apply parToH1 . commonmarkToNode [optSmart]
+postShortHeader :: Node -> Html ()
+postShortHeader = header_ . toHtmlRaw . nodeToHtml [] . apply parToH1
 
 postFooter :: ZonedTime -> [Text] -> Text -> Html ()
 postFooter posted tags author = do

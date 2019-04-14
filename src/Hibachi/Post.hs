@@ -7,6 +7,8 @@ module Hibachi.Post
     , generatePost
     , generateStory
     , generateCommon
+    , apply
+    , dropHeadingLevel
     )
     where
 
