@@ -30,6 +30,7 @@ ourStyle = do
     sourceCode
     lists
     logo
+    pagination
 
 fonts :: Css
 fonts = do
@@ -361,6 +362,17 @@ lists = do
         paddingLeft (rem 1)
     ul ? ("list-style" -: "disc inside")
     ol ? ("list-style" -: "decimal inside")
+
+pagination :: Css
+pagination = do
+    ".pagination" ? do
+        display inlineBlock
+        "list-style" -: "none"
+        a ? do
+            float floatLeft
+            textDecoration none
+            border solid (px 1) black
+            margin nil nil nil nil
 
 logo :: Css
 logo = ".logo" ?
