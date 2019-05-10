@@ -13,29 +13,30 @@ module Hibachi.Post
     )
     where
 
-import GHC.Generics
-import GHC.Err
+import           GHC.Err
+import           GHC.Generics
 
-import Prelude hiding (words, unlines, lines)
+import           Prelude                 hiding (lines, unlines, words)
 
-import Lucid
-import Data.Text (Text, intercalate, pack, words, lines, unlines)
-import Data.Text.Encoding (encodeUtf8)
+import           Data.Text               (Text, intercalate, lines, pack,
+                                          unlines, words)
+import           Data.Text.Encoding      (encodeUtf8)
+import           Lucid
 
-import Data.Maybe
-import Data.Either.Combinators
-import Data.Time
-import Data.Yaml
+import           Data.Either.Combinators
+import           Data.Maybe
+import           Data.Time
+import           Data.Yaml
 
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Char8   as BS
 
-import System.FilePath.Posix
+import           System.FilePath.Posix
 
-import CMark
+import           CMark
 
-import Hibachi.ReadTime
+import           Hibachi.ReadTime
 
-import Git (TreeFilePath)
+import           Git                     (TreeFilePath)
 
 type Author = Text
 
@@ -47,18 +48,18 @@ data Post = PlainPost PostCommon
             } deriving (Eq, Show, Ord)
 
 data PostCommon = PostCommon
-                { postAuthor :: Author
-                , postKeywords :: [Text]
-                , postTags :: [Text]
-                , postReadTime :: ReadTime
+                { postAuthor     :: Author
+                , postKeywords   :: [Text]
+                , postTags       :: [Text]
+                , postReadTime   :: ReadTime
 
-                , postTitle :: Node
-                , postAbstract :: Node
-                , postContent :: Node
+                , postTitle      :: Node
+                , postAbstract   :: Node
+                , postContent    :: Node
 
                 , postPostedTime :: ZonedTime
-                , postGitPath :: TreeFilePath
-                , postLinkPath :: FilePath --- The path a href needs to point to
+                , postGitPath    :: TreeFilePath
+                , postLinkPath   :: FilePath --- The path a href needs to point to
                 } deriving (Eq, Show, Ord)
 
 toCommon :: Post -> PostCommon
@@ -66,11 +67,11 @@ toCommon (PlainPost c) = c
 toCommon (Story _ c _) = c
 
 data FileMetadata = FileMetadata
-                  { title :: Text
+                  { title    :: Text
                   , abstract :: Text
-                  , tags :: [Text]
+                  , tags     :: [Text]
                   --, keywords :: [Text]
-                  , part :: Maybe Int
+                  , part     :: Maybe Int
                   } deriving (Eq, Show, Generic)
 instance FromJSON FileMetadata
 

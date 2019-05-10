@@ -7,44 +7,44 @@ module Hibachi.Util
     )
     where
 
-import Control.Monad.Catch (MonadMask)
+import           Control.Monad.Catch      (MonadMask)
 
-import Prelude hiding (filter, writeFile)
+import           Prelude                  hiding (filter, writeFile)
 
-import Hibachi.Post
-import Hibachi.Style
-import Hibachi.Index
-import Hibachi.Git
+import           Hibachi.Git
+import           Hibachi.Index
+import           Hibachi.Post
+import           Hibachi.Style
 
-import Data.Time
+import           Data.Time
 
-import Git
-import Git.Tree.Working
-import Git.Libgit2 (lgFactory, LgRepo, HasLgRepo)
+import           Git
+import           Git.Libgit2              (HasLgRepo, LgRepo, lgFactory)
+import           Git.Tree.Working
 
-import Control.Monad
-import Control.Monad.IO.Class
+import           Control.Monad
+import           Control.Monad.IO.Class
 
-import Data.Tagged
-import Data.Maybe
-import Data.Either
-import Data.List
+import           Data.Either
+import           Data.List
+import           Data.Maybe
+import           Data.Tagged
 
-import System.FilePath.Posix
-import System.Directory
+import           System.Directory
+import           System.FilePath.Posix
 
-import Conduit
+import           Conduit
 import qualified Data.Conduit.Combinators as CC
 
-import Data.Text (Text)
-import qualified Data.Text.Lazy as TL
-import Data.ByteString.Char8 (unpack, pack)
-import qualified Data.Text.Lazy.IO as TIO
+import           Data.ByteString.Char8    (pack, unpack)
+import           Data.Text                (Text)
+import qualified Data.Text.Lazy           as TL
+import qualified Data.Text.Lazy.IO        as TIO
 
-import qualified Data.Map.Lazy as Map
+import qualified Data.Map.Lazy            as Map
 
-import CMark
-import Lucid
+import           CMark
+import           Lucid
 
 type CommitMeta = (Text, ZonedTime)
 type Latest = Map.Map TreeFilePath (CommitMeta, Text)
@@ -54,8 +54,8 @@ type First = Map.Map TreeFilePath CommitMeta
 insertFirstModified :: TreeFilePath -> CommitMeta -> First -> First
 insertFirstModified = Map.insertWith seq
 
-data History = History 
-             { firstPostedMap :: First
+data History = History
+             { firstPostedMap  :: First
              , latestUpdateMap :: Latest
              } deriving (Eq, Show)
 
@@ -96,6 +96,7 @@ buildAll hist tree = do
 
     ps <- mapM (buildPost hist <$> (\(a,_,_) -> a)) posts
     ss <- mapM (uncurry (buildStories hist)) storytrees
+    liftIO $ print $ (lefts ps)
     return $ sortPostByDate $ (rights ps) ++ (concat ss)
 
 buildPost :: (MonadGit r m, MonadThrow m, MonadMask m, MonadUnliftIO m, HasLgRepo m) => History -> TreeFilePath -> m (Either PostError Post)

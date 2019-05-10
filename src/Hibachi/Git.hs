@@ -8,20 +8,20 @@ module Hibachi.Git
     )
     where
 
-import Control.Lens
-import Control.Monad (filterM)
+import           Control.Lens
+import           Control.Monad         (filterM)
 
-import Data.Maybe
+import           Data.Maybe
 
-import Data.ByteString.Char8 (unpack)
+import           Data.ByteString.Char8 (unpack)
 
-import Git
-import Git.Types
-import Git.Tree.Working
+import           Git
+import           Git.Tree.Working
+import           Git.Types
 
-import Hibachi.Post
+import           Hibachi.Post
 
-import qualified Data.Map.Lazy as Map
+import qualified Data.Map.Lazy         as Map
 
 getParentTrees :: MonadGit r m => Commit r -> m [Tree r]
 getParentTrees c = do
@@ -43,9 +43,9 @@ notInParents ps (path, (BlobEntry o _)) = do
     let map = Map.fromList ps
 
     return $ case Map.lookup path map of
-        Nothing -> True
+        Nothing               -> True
         Just (BlobEntry o2 _) -> o /= o2
-        otherwise -> False
+        otherwise             -> False
 notInParents _ _ = return $ False
 
 getModifiedEntries :: MonadGit r m => Commit r -> m [(TreeFilePath, TreeEntry r)]
@@ -83,7 +83,7 @@ toPost c (path, entry) = do
         (BlobEntry oid _) -> do
             rawcontent <- catBlobUtf8 oid
             case generatePost author time path rawcontent of
-                Left _ -> return Nothing
+                Left _  -> return Nothing
                 Right p -> return $ Just p
         _ -> return Nothing
 

@@ -1,27 +1,27 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module Main where
 
-import Prelude hiding (writeFile)
+import           Prelude                hiding (writeFile, (*>))
 
-import Development.Shake
-import Development.Shake.Rule
+import           Development.Shake
+import           Development.Shake.Rule
 
-import System.Directory
-import System.FilePath.Posix
+import           System.Directory
+import           System.FilePath.Posix
 
-import Hibachi
-import Hibachi.Util
-import Hibachi.Post
-import Hibachi.Style
-import Hibachi.Templates
+import           Hibachi
+import           Hibachi.Post
+import           Hibachi.Style
+import           Hibachi.Templates
+import           Hibachi.Util
 
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.IO as TLIO
-import Data.Text.Lazy.IO (writeFile)
-import Data.HashMap.Strict (empty)
+import           Data.HashMap.Strict    (empty)
+import qualified Data.Text              as T
+import qualified Data.Text.IO           as TIO
+import qualified Data.Text.Lazy         as TL
+import           Data.Text.Lazy.IO      (writeFile)
+import qualified Data.Text.Lazy.IO      as TLIO
 
 main :: IO ()
 main = do
@@ -37,7 +37,7 @@ defs = versioned 1 $ do
 
     want [ "out/css/default.css"
          , "out/index.html"
-         --, "posts"
+         , "posts"
          --, "stories"
          --, "out/projects.html"
          , "out/robots.txt"
@@ -50,7 +50,12 @@ defs = versioned 1 $ do
         oid <- gitRefNeed "refs/heads/posts"
         ps <- buildAllAction oid
         writeFileTL p $ hrenderText $ renderPostIndex ps
+
+    "posts" ~> do
+        oid <- gitRefNeed "refs/heads/posts"
+        ps <- buildAllAction oid
         mapM_ writePost ps
+
 
     "out/robots.txt" %> \p ->
         writeFileText p =<< needVersionedFile "static" "robots.txt"
@@ -78,4 +83,4 @@ writeFileHtml path content = liftIO $ do
 writePost :: Post -> Action ()
 writePost p@(PlainPost (PostCommon{postLinkPath=path})) = inner path p
 writePost p@(Story _ (PostCommon{postLinkPath=path}) _) = inner path p
-inner path p = writeFileTL path $ hrenderText $ renderPost p
+inner path p = writeFileTL ("out" </> path) $ hrenderText $ renderPost p
