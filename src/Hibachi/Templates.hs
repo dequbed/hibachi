@@ -12,28 +12,29 @@ module Hibachi.Templates
     )
     where
 
-import Hibachi.ReadTime
-import Hibachi.Post
+import           Hibachi.Post
+import           Hibachi.ReadTime
 
-import CMark
-import Lucid
+import           CMark
+import           Lucid
 
-import Data.Text (Text, intercalate, pack, words, lines, unlines)
-import Data.Text.Encoding (encodeUtf8)
+import           Data.Text             (Text, intercalate, lines, pack, unlines,
+                                        words)
+import           Data.Text.Encoding    (encodeUtf8)
 
-import Data.Time
-import Data.Time.Clock
-import Data.Time.Format
+import           Data.Time
+import           Data.Time.Clock
+import           Data.Time.Format
 
-import Data.Maybe
+import           Data.Maybe
 
-import System.FilePath.Posix
+import           System.FilePath.Posix
 
 renderPost :: Post -> Html ()
-renderPost (PlainPost p) = renderPost' p
+renderPost (PlainPost p)    = renderPost' p
 renderPost (Story _ this _) = renderPost' this
 renderPost' p = do
-    doctype_ 
+    doctype_
     html_ [lang_ "en"] $ do
         htmlHead (postAuthor p) (nodeToHtml [optSmart, optNormalize] $ postAbstract p) (postKeywords p)
         htmlBody $ do
@@ -78,12 +79,13 @@ renderShortPostlink p =
         postFooter (postPostedTime p) (postTags p) (postAuthor p)
 
 renderContent :: Node -> Html ()
-renderContent = toHtmlRaw . nodeToHtml [optSmart, optNormalize]
+renderContent = toHtmlRaw . nodeToHtml [optSmart, optNormalize, optUnsafe]
 
 htmlHead :: Text -> Text -> [Text] -> Html ()
 htmlHead author desc keywords = head_ $ do
     link_ [rel_ "stylesheet", type_ "text/css", href_ "/css/default.css"]
     link_ [rel_ "stylesheet", type_ "text/css", href_ "/css/fontawesome.css"]
+    link_ [rel_ "stylesheet", type_ "text/css", href_ "/css/code.css"]
     meta_ [charset_ "utf-8"]
     m "generator" "hibachi-1.0"
     m "referrer" "no-referrer"
@@ -95,7 +97,7 @@ htmlHead author desc keywords = head_ $ do
     m "keywords" $ intercalate "," keywords
   where
     m _ "" = return ()
-    m a b = meta_ [name_ a, content_ b]
+    m a b  = meta_ [name_ a, content_ b]
 
 htmlBody :: Html () -> Html ()
 htmlBody c = body_ $ let togglenav = "toggle-nav" in do
@@ -126,7 +128,7 @@ htmlBody c = body_ $ let togglenav = "toggle-nav" in do
 
 parToH1' :: NodeType -> NodeType
 parToH1' PARAGRAPH = HEADING 1
-parToH1' nt = nt
+parToH1' nt        = nt
 
 parToH1 :: Node -> Node
 parToH1 (Node p t ns) = Node p (parToH1' t) ns
@@ -146,7 +148,7 @@ postFooter :: ZonedTime -> [Text] -> Text -> Html ()
 postFooter posted tags author = do
     footer_ [class_ "post-footer"] $ do
         "Posted "
-        time_ [datetime_ (pack $ formatTime defaultTimeLocale "%Y-%m-%dT%T%z" posted)] 
+        time_ [datetime_ (pack $ formatTime defaultTimeLocale "%Y-%m-%dT%T%z" posted)]
                 $ toHtml (pack $ formatTime defaultTimeLocale "%d. %b %Y %R %Z" posted)
         " in"
         ul_ [class_ "tags"] $ mapM_ (li_ [class_ ("tag")] . toHtml) tags

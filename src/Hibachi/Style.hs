@@ -1,21 +1,27 @@
 module Hibachi.Style
     ( styleText
+    , styleCode
     , ourStyle
     , putCss
     )
     where
 
-import Prelude hiding (span, rem, not, (**))
+import           Prelude        hiding (not, rem, span, (**))
 
-import Data.Text.Lazy (Text)
+import           Data.Text.Lazy (Text)
 
-import Clay
-import Clay.FontFace
-import qualified Clay.Media as Media
-import qualified Clay.Flexbox as Flexbox
+import           Clay
+import qualified Clay.Flexbox   as Flexbox
+import           Clay.FontFace
+import qualified Clay.Media     as Media
+
+import           Skylighting    (pygments, styleToCss)
 
 styleText :: Text
 styleText = renderWith pretty [] ourStyle
+
+styleCode :: String
+styleCode = styleToCss pygments
 
 ourStyle :: Css
 ourStyle = do

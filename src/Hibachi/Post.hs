@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Hibachi.Post
     ( Post(..)
@@ -16,11 +17,13 @@ module Hibachi.Post
 import           GHC.Err
 import           GHC.Generics
 
-import           Prelude                 hiding (lines, unlines, words)
+import           Debug.Trace
 
-import           Data.Text               (Text, intercalate, lines, pack,
-                                          unlines, words)
-import           Data.Text.Encoding      (encodeUtf8)
+import           Prelude                       hiding (lines, unlines, words)
+
+import           Data.Text                     (Text, intercalate, lines, pack,
+                                                unlines, words)
+import           Data.Text.Encoding            (encodeUtf8)
 import           Lucid
 
 import           Data.Either.Combinators
@@ -28,7 +31,7 @@ import           Data.Maybe
 import           Data.Time
 import           Data.Yaml
 
-import qualified Data.ByteString.Char8   as BS
+import qualified Data.ByteString.Char8         as BS
 
 import           System.FilePath.Posix
 
@@ -36,7 +39,11 @@ import           CMark
 
 import           Hibachi.ReadTime
 
-import           Git                     (TreeFilePath)
+import           Git                           (TreeFilePath)
+
+import           Data.Text.Lazy                (toStrict)
+import           Skylighting
+import           Text.Blaze.Html.Renderer.Text
 
 type Author = Text
 
@@ -92,7 +99,7 @@ generateStory author postedTime path prev next filecontent = do
 generateCommon :: Author -> ZonedTime -> TreeFilePath -> Text -> Either PostError PostCommon
 generateCommon author postedTime path filecontent = do
     (m, content) <- mapLeft fromParseException $ parsePostFile filecontent
-    let content' = apply dropHeadingLevel content
+    let content' = apply dropHeadingLevel $ apply highlightCode $ content
     Right $ PostCommon
         author
         [] --(keywords m)
@@ -110,7 +117,7 @@ toLinkPath p = "p" </> BS.unpack p -<.> "html"
 parsePostFile :: Text -> Either ParseException (FileMetadata, Node)
 parsePostFile c = do
     let (mt, ct) = splitMeta c
-        n = commonmarkToNode [optSourcePos, optNormalize, optSmart] ct
+        n = commonmarkToNode [optSourcePos, optNormalize, optSmart, optUnsafe] ct
     m <- decodeEither' $ encodeUtf8 mt
     Right (m, n)
 
@@ -137,10 +144,26 @@ calculateReadTime' (IMAGE _ t)      = ReadTime (length $ words t) 1
 calculateReadTime' _                = ReadTime 0 0
 
 
+wrap :: (NodeType -> NodeType) -> Node -> Node
+wrap f (Node p t ns) = Node p (f t) ns
+
 dropHeadingLevel' :: NodeType -> NodeType
 dropHeadingLevel' (HEADING 6) = STRONG
 dropHeadingLevel' (HEADING x) = HEADING (x+1)
 dropHeadingLevel' nt          = nt
 
 dropHeadingLevel :: Node -> Node
-dropHeadingLevel (Node p t ns) = Node p (dropHeadingLevel' t) ns
+dropHeadingLevel = wrap dropHeadingLevel'
+
+highlightCode' :: NodeType -> NodeType
+highlightCode' (CODE_BLOCK i t) = do
+    let sm = defaultSyntaxMap
+    case lookupSyntax i sm of
+      Just syn -> case tokenize (TokenizerConfig sm False) syn t of
+        Left e -> (CODE_BLOCK i t)
+        Right sl -> HTML_BLOCK $ toStrict $ renderHtml $ formatHtmlBlock defaultFormatOpts sl
+      Nothing -> (CODE_BLOCK i t)
+highlightCode' n                = n
+
+highlightCode :: Node -> Node
+highlightCode = wrap highlightCode'

@@ -1,3 +1,5 @@
 packages:
   ./Hibachi.cabal
   ../gitlib/gitlib-libgit2/gitlib-libgit2.cabal
+  ../skylighting/skylighting-core
+  ../skylighting/skylighting

@@ -36,6 +36,7 @@ defs = versioned 1 $ do
     setupHibachi
 
     want [ "out/css/default.css"
+         , "out/css/code.css"
          , "out/index.html"
          , "posts"
          --, "stories"
@@ -45,6 +46,7 @@ defs = versioned 1 $ do
          ]
 
     "out/css/default.css" %> \p -> writeFileTL p styleText
+    "out/css/code.css" %> \p -> writeFile' p styleCode
 
     "out/index.html" %> \p -> do
         oid <- gitRefNeed "refs/heads/posts"
