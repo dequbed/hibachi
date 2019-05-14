@@ -348,9 +348,10 @@ links = do
         color "#410a4c"
     a#("href"*="http")#before#(not ".navlink") ? do
         content $ stringContent "\61582"
-        fontFamily ["FontAwesome"] [monospace]
+        paddingLeft (em 0.4)
         fontSize (em 0.6)
-        paddingRight (em 0.2)
+        fontFamily ["FontAwesome"] [monospace]
+
 
 sourceCode :: Css
 sourceCode = do

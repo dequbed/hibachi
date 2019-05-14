@@ -5,9 +5,9 @@ module Hibachi.ReadTime
     )
     where
 
-import Data.Time
-import Data.Time.Clock
-import Data.Time.Format
+import           Data.Time
+import           Data.Time.Clock
+import           Data.Time.Format
 
 instance Eq ZonedTime where
     a == b = (zonedTimeToUTC a) == (zonedTimeToUTC b)
@@ -15,7 +15,7 @@ instance Ord ZonedTime where
     compare a b = compare (zonedTimeToUTC a) (zonedTimeToUTC b)
 
 data ReadTime = ReadTime
-              { numWords :: Int
+              { numWords  :: Int
               , numImages :: Int
               }
     deriving (Eq, Ord)
@@ -39,4 +39,3 @@ minutesReadTime :: ReadTime -> Int
 -- first, 11 for the second, 10 for the third picture ... (`reverse
 -- [3..12]`) and 3 seconds for every picture after the 10th (repeat 3)
 minutesReadTime (ReadTime w i) = (w `div` 275) + ((sum $ take i $ reverse [3..12] ++ repeat 3) `div` 60)
-

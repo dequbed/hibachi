@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Hibachi.Templates
     ( postHeader
     , postShortHeader

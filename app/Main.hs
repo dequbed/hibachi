@@ -85,4 +85,4 @@ writeFileHtml path content = liftIO $ do
 writePost :: Post -> Action ()
 writePost p@(PlainPost (PostCommon{postLinkPath=path})) = inner path p
 writePost p@(Story _ (PostCommon{postLinkPath=path}) _) = inner path p
-inner path p = writeFileTL ("out" </> path) $ hrenderText $ renderPost p
+inner path p = writeFileTL ("out" </> path <.> "html" ) $ hrenderText $ renderPost p

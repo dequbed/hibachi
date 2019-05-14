@@ -38,6 +38,7 @@ import           System.FilePath.Posix
 import           CMark
 
 import           Hibachi.ReadTime
+import           Hibachi.Types
 
 import           Git                           (TreeFilePath)
 
@@ -45,47 +46,6 @@ import           Data.Text.Lazy                (toStrict)
 import           Skylighting
 import           Text.Blaze.Html.Renderer.Text
 
-type Author = Text
-
-data Post = PlainPost PostCommon
-          | Story
-            { prev :: [PostCommon]
-            , this :: PostCommon
-            , succ :: [PostCommon]
-            } deriving (Eq, Show, Ord)
-
-data PostCommon = PostCommon
-                { postAuthor     :: Author
-                , postKeywords   :: [Text]
-                , postTags       :: [Text]
-                , postReadTime   :: ReadTime
-
-                , postTitle      :: Node
-                , postAbstract   :: Node
-                , postContent    :: Node
-
-                , postPostedTime :: ZonedTime
-                , postGitPath    :: TreeFilePath
-                , postLinkPath   :: FilePath --- The path a href needs to point to
-                } deriving (Eq, Show, Ord)
-
-toCommon :: Post -> PostCommon
-toCommon (PlainPost c) = c
-toCommon (Story _ c _) = c
-
-data FileMetadata = FileMetadata
-                  { title    :: Text
-                  , abstract :: Text
-                  , tags     :: [Text]
-                  --, keywords :: [Text]
-                  , part     :: Maybe Int
-                  } deriving (Eq, Show, Generic)
-instance FromJSON FileMetadata
-
-data PostError = YamlErr ParseException
-    deriving Show
-fromParseException :: ParseException -> PostError
-fromParseException = YamlErr
 
 generatePost :: Author -> ZonedTime -> TreeFilePath -> Text -> Either PostError Post
 generatePost author postedTime path filecontent =
@@ -112,7 +72,7 @@ generateCommon author postedTime path filecontent = do
         path
         (toLinkPath path)
 
-toLinkPath p = "p" </> BS.unpack p -<.> "html"
+toLinkPath p = "p" </> (dropExtension $ BS.unpack p)
 
 parsePostFile :: Text -> Either ParseException (FileMetadata, Node)
 parsePostFile c = do
