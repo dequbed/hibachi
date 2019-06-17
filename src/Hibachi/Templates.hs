@@ -151,7 +151,7 @@ postFooter posted tags author = do
     footer_ [class_ "post-footer"] $ do
         "Posted "
         time_ [datetime_ (pack $ formatTime defaultTimeLocale "%Y-%m-%dT%T%z" posted)]
-                $ toHtml (pack $ formatTime defaultTimeLocale "%d. %b %Y %R %Z" posted)
+                $ toHtml (pack $ formatTime defaultTimeLocale "%d. %b %Y %R" posted)
         " in"
         ul_ [class_ "tags"] $ mapM_ (li_ [class_ ("tag")] . toHtml) tags
         "by "
