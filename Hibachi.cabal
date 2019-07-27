@@ -44,9 +44,11 @@ library
           Hibachi.Index
           Hibachi.Post
           Hibachi.ReadTime
+          Hibachi.Shake
           Hibachi.State
           Hibachi.Style
           Hibachi.Templates
+          Hibachi.Types
           Hibachi.Util
 
     build-depends:
