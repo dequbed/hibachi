@@ -34,13 +34,16 @@ main = hibachiBuild "/home/glr/Documents/Blog/posts" $ do
     out "projects.html" %> \out ->
         writeFile' out =<< genProjectsPage "projects"
 
+    out "css/default.css" %> \out ->
+        writeFile' out styleText
+
     "always" ~> do
         m <- listposts "posts"
         liftIO $ print m
         need $ map (out . costrip . unpack) m 
         return ()
     --want ["robots.txt", "about.html", "feed.xml", "index.html", "projects.html"]
-    want [ out "about.html" ]
+    want [ out "about.html", out "css/default.css"]
     want ["always"]
 
 strip p = (joinPath . drop 2 . splitPath) $ p -<.> "md"
@@ -49,7 +52,7 @@ costrip p = "p/" ++ p -<.> ".html"
 
 sstrip = take 1 . drop 1 . splitPath
 
-genPostPage = fromBranch
+genPostPage a b = postTemplate <$> fromBranch a b
 
 genRssFeed b = liftIO $ print b >> pure ""
 genIndexPage b = liftIO $ print b >> pure ""

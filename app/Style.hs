@@ -1,10 +1,8 @@
 module Style where
 
-import Clay
-
 import           Prelude        hiding (not, rem, span, (**))
 
-import           Data.Text.Lazy (Text)
+import           Data.Text.Lazy (Text, toStrict)
 
 import           Clay
 import qualified Clay.Flexbox   as Flexbox
@@ -13,8 +11,8 @@ import qualified Clay.Media     as Media
 
 import           Skylighting    (pygments, styleToCss)
 
-styleText :: Text
-styleText = renderWith pretty [] ourStyle
+--styleText :: Text
+styleText = toStrict $ renderWith pretty [] ourStyle
 
 styleCode :: String
 styleCode = styleToCss pygments
