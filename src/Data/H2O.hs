@@ -1,11 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Data.H2O 
-    ( module CMark
-
-    , Post(..)
-    , PostHeader(..)
-    , Meta(..)
-    )
     where
 
 import Prelude hiding (length)
@@ -40,6 +34,7 @@ data Storylinks u = Storylinks
 
 makeLenses ''Storylinks
 
+-- | Meta is the part of the post metadata that is extraced from git
 data Meta = Meta
     { _author :: Text
     , _email :: Text
@@ -83,4 +78,4 @@ data GPost m = GPost
 
 makeLenses ''GPost
 
-type Post = GPost (Html ())
+type Post = GPost Node
