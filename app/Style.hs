@@ -1,6 +1,6 @@
 module Style where
 
-import           Prelude        hiding (not, rem, span, (**))
+import           Prelude        hiding (not, rem, span, (**), display)
 
 import           Data.Text.Lazy (Text, toStrict)
 
@@ -33,8 +33,8 @@ ourStyle = do
     pagination
 
 fonts :: Css
-fonts = do
-    mf [ ("Vollkorn", "/fonts/Vollkorn-Regular.woff2", normal, weight 400)
+fonts = mf
+       [ ("Vollkorn", "/fonts/Vollkorn-Regular.woff2", normal, weight 400)
        , ("Hack", "/fonts/Hack-Regular.woff2", normal, weight 400)
        , ("Vollkorn", "/fonts/Vollkorn-Italic.woff2", italic, weight 400)
        , ("Vollkorn", "/fonts/Vollkorn-Semibold.woff2", normal, weight 500)
@@ -50,10 +50,10 @@ fonts = do
        , ("FontAwesome", "/fonts/fontawesome-webfont.woff2", normal, normal)
        ]
   where
-    mf = mapM_ fontFace . Prelude.map ff
+    mf = mapM_ (fontFace . ff)
     ff (a,b,c,d) = do
         fontFamily [a] []
-        fontFaceSrc $ [FontFaceSrcUrl b $ Just WOFF2]
+        fontFaceSrc [FontFaceSrcUrl b $ Just WOFF2]
         fontStyle c
         fontWeight d
 
@@ -66,6 +66,9 @@ typesetting = do
         backgroundColor "#3a3e4f"
     h1 <> h2 <> h3 <> h4 <> h5 <> h6 ? do
         "font-variant-caps" -: "small-caps"
+        marginTop (em 1)
+        textIndent $ indent (em 1)
+
 
     h1 ? do
         fontSize (pt 21)
@@ -75,8 +78,8 @@ typesetting = do
     h2 ? do
         fontSize (pt 17.5)
         lineHeight $ unitless 1
-        marginTop $ (pt 16.8)
-        marginBottom $ (pt 4.2)
+        marginTop (pt 16.8)
+        marginBottom (pt 4.2)
 
     p ? do
         lineHeight $ unitless 1.5
@@ -86,7 +89,7 @@ typesetting = do
         textIndent $ indent (em 1)
         marginTop nil
 
-    article |> ( p#firstLetter#nthOfType "1") ? do
+    article |> p#firstLetter#nthOfType "1" ? do
         color "#8e16a6"
         float floatLeft
         fontFamily ["Dearest"] [cursive]

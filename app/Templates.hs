@@ -1,6 +1,6 @@
 module Templates where
 
-import Control.Lens
+import Prelude hiding (for_)
 
 import Data.H2O
 import Data.H2O.Post
@@ -15,26 +15,43 @@ import Data.Text (Text, intercalate, pack)
 aboutTemplate :: Text -> Text
 aboutTemplate = renderHtmlT . renderAbout . readCM
 
-postTemplate :: Text -> Text
-postTemplate = renderHtmlT . renderPost . readPost'
+postTemplate :: Meta -> Text -> Either Text Text
+postTemplate m t = renderHtmlT . renderPost <$> readPost m t
+
+storyTemplate :: Story -> Text
+storyTemplate = pack . show
+
+indexTemplate :: [Post] -> Text
+indexTemplate = renderHtmlT . renderIndex
+
+renderIndex :: [Post] -> Html ()
+renderIndex ps = htmlPre $ do
+        htmlHeadM (return ())
+        htmlBody $ mapM_ renderPostlink ps
 
 htmlPre f = do
     doctype_
     html_ [lang_ "en"] f
 
-getReadTime = undefined
-
 renderPost :: Post -> Html ()
-renderPost post = renderPost' (post^.meta.author) (post^.abstract) [] (post^.title) (getReadTime post^.content) (post^.content) (post^.(meta.posted)) []
-
-renderPost' author abstract keywords title readtime content postedTime tags =
-    htmlPre $ do
-        htmlHead author (nodeToHtml [optSmart, optNormalize] abstract) keywords
-        htmlBody $
-            article_ [class_ "post"] $ do
-                postHeader title readtime
-                renderContent content
-                postFooter postedTime tags author
+renderPost post = renderPost'
+        (post^.author)
+        (post^.abstract)
+        []
+        (post^.title)
+        (calculateReadTime $ post^.content)
+        (post^.content)
+        (post^.posted)
+        []
+    where
+    renderPost' author abstract keywords title readtime content postedTime tags =
+        htmlPre $ do
+            htmlHead author (nodeToHtml [optSmart, optNormalize] abstract) keywords
+            htmlBody $
+                article_ [class_ "post"] $ do
+                    postHeader title readtime
+                    renderNode [] content
+                    postFooter postedTime tags author
 
 renderAbout :: Node -> Html ()
 renderAbout about =
@@ -42,8 +59,15 @@ renderAbout about =
         htmlHead "Gregor 'dequbed' Reitzenstein" "" ["Blog", "dequbed"]
         htmlBody $
             div_ [class_ "post"]
-                $ renderContent
+                $ renderNode []
                 $ apply dropHeadingLevel about
+
+renderPostlink :: Post -> Html ()
+renderPostlink post =
+    a_ [class_ "postlink", href_ ""] $ article_ [class_ "post"] $ do
+        postHeader (post^.title) (post^.readtime)
+        renderNode [] (post^.abstract)
+        postFooter (post^.posted) (post^.tags) (post^.author)
 
 -- renderIndex :: [PostCommon] -> Html ()
 -- renderIndex ps = do
@@ -66,11 +90,8 @@ renderAbout about =
 --         toHtmlRaw $ nodeToHtml [optSmart, optNormalize] (postAbstract p)
 --         postFooter (postPostedTime p) (postTags p) (postAuthor p)
 
-renderContent :: Node -> Html ()
-renderContent = toHtmlRaw . nodeToHtml [optSmart, optNormalize, optUnsafe]
-
-htmlHead :: Text -> Text -> [Text] -> Html ()
-htmlHead author desc keywords = head_ $ do
+htmlHeadM :: Html () -> Html ()
+htmlHeadM i = head_ $ do
     link_ [rel_ "stylesheet", type_ "text/css", href_ "/css/default.css"]
     link_ [rel_ "stylesheet", type_ "text/css", href_ "/css/fontawesome.css"]
     link_ [rel_ "stylesheet", type_ "text/css", href_ "/css/code.css"]
@@ -80,6 +101,15 @@ htmlHead author desc keywords = head_ $ do
     m "HandheldFriendly" "True"
     m "viewport" "width=device-width, initial-scale=1.0"
 
+    i
+  where
+    m "" _ = return ()
+    m _ "" = return ()
+    m a b  = meta_ [name_ a, content_ b]
+
+
+htmlHead :: Text -> Text -> [Text] -> Html ()
+htmlHead author desc keywords = htmlHeadM $ do
     m "author" author
     m "description" desc
     m "keywords" $ intercalate "," keywords
