@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Data.H2O.Read where
 
-import qualified    Data.ByteString.Char8 as BS
 import              Data.ByteString (ByteString)
 
 import              Data.Text (Text)
@@ -10,7 +9,7 @@ import              Data.Text.Encoding (encodeUtf8)
 
 import              Data.Yaml
 
-import              Data.H2O
+import              Data.H2O.Types (PostHeader)
 
 readHeader :: Text -> Maybe PostHeader
 readHeader = decodeThrow <$> getHeader
