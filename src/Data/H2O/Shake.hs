@@ -1,18 +1,9 @@
 module Data.H2O.Shake 
-    ( module Development.Shake
-    , module Development.Shake.FilePath
-    , hibachiBuild
-    , writeFile'
-    , fromBranch
-    , branchNeed
-    , lastMod
-    , lastModC
-    , lastModB
-    , listposts
+    ( hibachiBuild
     )
     where
 
-import Prelude hiding (mapM, foldl)
+import qualified Prelude.List as L
 
 import Foreign.ForeignPtr
 import GHC.Generics hiding (Meta)
@@ -27,10 +18,12 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 
 import Control.Monad.IO.Class
+import Control.Monad.Catch
+import qualified Control.Monad as M
 
 import Conduit
 import Data.Conduit
-import Data.Conduit.Combinators as C
+import qualified Data.Conduit.Combinators as C
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -44,6 +37,8 @@ import Data.Time.Clock
 import Data.Maybe
 import Data.Tagged
 
+import Data.Either.Combinators (fromRight')
+
 import Development.Shake hiding (writeFile')
 import Development.Shake.FilePath
 import Development.Shake.Rule
@@ -52,10 +47,38 @@ import Git hiding (Commit, CommitOid, TreeEntry, Tree, BlobOid)
 import Git.Libgit2
 import Git.Libgit2.Types
 
-import Control.Monad.Catch
-
-import Data.H2O (Meta(..), PostHeader(..))
+import Data.H2O (Meta(..), PostHeader(..), Post(..), Story(..), storyName, story)
 import Data.H2O.Read
+import Data.H2O.Post (readPost, Error)
+
+-- | Setup function that needs to be called before being able to do any other Actions requiring a
+-- repository
+hibachiBuild :: FilePath -> Rules () -> IO ()
+hibachiBuild repo f = shakeArgs so $ do
+    addBranchHeadRule
+    addMetaMapRule
+    f
+  where
+    so = shakeOptions{shakeExtra = addShakeExtra (RepoPath repo) $ shakeExtra shakeOptions}
+
+-- | Get a List of all Posts in the index of the given branch, sorted newest to oldest
+getPosts :: BranchName -> Action [Post]
+getPosts = undefined
+
+-- | Get a Map of all storied posts in the index of the given branch
+getStories :: BranchName -> Action (Map Text [Post])
+getStories b = do
+    posts <- getPosts b
+    return $ L.foldl (\map post -> case post^.story of
+        Just s -> Map.insertWith (<>) (s^.storyName) [post] map
+        Nothing -> map) Map.empty posts
+
+
+-- | Shake option for the path of the repository
+newtype RepoPath = RepoPath FilePath
+getRepo = getShakeExtra >>= \case
+    Just (RepoPath r) -> return r
+    Nothing -> fail "Repository path isn't defined"
 
 instance NFData Commit where
     rnf a = seq a ()
@@ -68,18 +91,18 @@ newtype Branch = Branch BranchName
     deriving (Eq, Ord, Show, Generic, Hashable, Binary, NFData)
 type instance RuleResult Branch = Commit
 
-branchNeed :: BranchName -> Action Commit
-branchNeed = apply1 . Branch
+-- | Access the latest commit in a branch as an `Action`
+getBranchHead :: BranchName -> Action Commit
+getBranchHead = apply1 . Branch
 
-newtype RepoPath = RepoPath FilePath
-
-addBuiltinBranchRule :: Rules ()
-addBuiltinBranchRule = addBuiltinRule noLint noIdentity run
+addBranchHeadRule :: Rules ()
+addBranchHeadRule = addBuiltinRule noLint noIdentity run
   where
     run :: BuiltinRun Branch Commit
     run (Branch key) old mode = do
         repo <- getRepo
         c <- liftIO $ withRepository lgFactory repo $ do
+            -- TODO: Fail more verbosly
             ref <- fromJust <$> resolveReference ("refs/heads/" <> key)
             lookupCommit (Tagged ref)
 
@@ -97,16 +120,16 @@ instance Binary SHA where
     put = putByteString . getSHA
     get = SHA <$> getByteString 19
 
-newtype LastModified = LastModified SHA
+newtype MetaMap = MetaMap SHA
     deriving (Eq, Show, Generic, Hashable, Binary, NFData)
-type instance RuleResult LastModified = Map TreeFilePath Meta
+type instance RuleResult MetaMap = Map TreeFilePath Meta
 
-addBuiltinModifiedRule :: Rules ()
-addBuiltinModifiedRule = addBuiltinRule noLint noIdentity run
+addMetaMapRule :: Rules ()
+addMetaMapRule = addBuiltinRule noLint noIdentity run
   where
-    run :: BuiltinRun LastModified (Map TreeFilePath Meta)
-    run (LastModified sha) Nothing _ = update sha Nothing Map.empty
-    run (LastModified sha) (Just stored) mode = do
+    run :: BuiltinRun MetaMap (Map TreeFilePath Meta)
+    run (MetaMap sha) Nothing _ = update sha Nothing Map.empty
+    run (MetaMap sha) (Just stored) mode = do
         let (old, map) = decode $ fromStrict stored
         if mode == RunDependenciesSame && old == sha then
             return $ RunResult ChangedNothing stored map
@@ -122,9 +145,9 @@ addBuiltinModifiedRule = addBuiltinRule noLint noIdentity run
                 Just s -> Just . Tagged <$> liftIO (shaToOid s)
                 Nothing -> return Nothing
             runConduit $ sourceObjects ohave oneed False
-                .| mapM (\(CommitObjOid c) -> return c)
-                .| mapM lookupCommit
-                .| foldM updateAll map
+                .| C.mapM (\(CommitObjOid c) -> return c)
+                .| C.mapM lookupCommit
+                .| C.foldM updateAll map
         return $ RunResult ChangedRecomputeDiff (toStrict $ encode (have, m)) m
 
 updateAll :: (MonadGit r m, HasLgRepo m, MonadMask m, MonadUnliftIO m) 
@@ -133,14 +156,18 @@ updateAll m c = do
     let meta = metaFromCommit c
     tree <- lookupTree $ commitTree c
     runConduit $ sourceTreeEntries tree 
-        .| foldl (updt meta) m
+        .| C.foldl (update meta) m
   where 
-    updt :: Meta -> Map TreeFilePath Meta -> (TreeFilePath, TreeEntry) -> Map TreeFilePath Meta
-    updt meta map (path, BlobEntry _ _) = Map.insertWith f path meta map
-    updt _ m _ = m
+    update :: Meta -> Map TreeFilePath Meta -> (TreeFilePath, TreeEntry) -> Map TreeFilePath Meta
+    update meta map (path, BlobEntry _ _) = Map.insertWith combine path meta map
+    update _ m _ = m
 
-    f :: Meta -> Meta -> Meta
-    f (Meta _ _ _ m) (Meta a e p _) = Meta a e p m
+    -- Combining function: Author, Email & Initial posted date are kept, last modified date is
+    -- updated
+    combine :: Meta -> Meta -> Meta
+    -- New                   Old
+    combine (Meta _ _ _ modified) (Meta author email posted _) = Meta author email posted modified
+
 
 metaFromCommit :: Commit -> Meta
 metaFromCommit = metaFromAuthor . commitAuthor
@@ -148,42 +175,31 @@ metaFromCommit = metaFromAuthor . commitAuthor
     metaFromAuthor (Signature name email when) = Meta name email (u when) (u when)
     u = zonedTimeToUTC
 
-lastMod :: SHA -> Action (Map TreeFilePath Meta)
-lastMod = apply1 . LastModified
+metaMap :: SHA -> Action (Map TreeFilePath Meta)
+metaMap = apply1 . MetaMap
 
-lastModC :: Commit -> Action (Map TreeFilePath Meta)
-lastModC c = do
+metaMapCommit :: Commit -> Action (Map TreeFilePath Meta)
+metaMapCommit c = do
     let oid = (getOid . untag . commitOid) c
     s <- liftIO $ withForeignPtr oid oidToSha
-    lastMod s
+    metaMap s
 
-lastModB :: BranchName -> Action (Map TreeFilePath Meta)
-lastModB b = do
-    c <- branchNeed b
-    lastModC c
+metaMapBranch :: BranchName -> Action (Map TreeFilePath Meta)
+metaMapBranch b = do
+    c <- getBranchHead b
+    metaMapCommit c
 
-needBTree :: BranchName -> Action Tree
-needBTree branch = do
-    c <- branchNeed branch
+-- | Get the index of a branch as an `Action`
+branchTree :: BranchName -> Action Tree
+branchTree branch = do
+    c <- getBranchHead branch
     repo <- getRepo
     liftIO $ withRepository lgFactory repo $
         lookupTree $ commitTree c
 
-listposts :: BranchName -> Action [TreeFilePath]
-listposts b = do
-    t <- needBTree b
-    repo <- getRepo
-    liftIO $ withRepository lgFactory repo $
-        runConduit $ sourceTreeEntries t
-            .| C.filter (\case
-                (_, BlobEntry _ _) -> True
-                _ -> False)
-            .| C.map fst
-            .| sinkList
-
-getStories :: BranchName -> Action (Map Text [(Int, TreeFilePath)])
-getStories b = do
-    t <- needBTree b
+getPostsC :: BranchName -> Action (Map Text Story)
+getPostsC b = do
+    t <- branchTree b
     repo <- getRepo
     liftIO $ withRepository lgFactory repo $
         runConduit $ sourceTreeEntries t
@@ -191,45 +207,51 @@ getStories b = do
                 (_, BlobEntry _ _) -> True
                 _ -> False)
             .| C.map (\(p, BlobEntry o _) -> (p, o))
-            .| foldM genStoryLink Map.empty
+            .| C.foldM genPostMap Map.empty
+
+genPostMap :: (MonadGit r m, HasLgRepo m, MonadMask m, MonadUnliftIO m)
+           => Map Text Story -> (TreeFilePath, BlobOid) -> m (Map Text Story)
+genPostMap map (path, oid) = do
+    undefined
+
+
+getStories' :: BranchName -> Action (Map Text (Map Int TreeFilePath))
+getStories' b = do
+    t <- branchTree b
+    repo <- getRepo
+    liftIO $ withRepository lgFactory repo $
+        runConduit $ sourceTreeEntries t
+            .| C.filter (\case
+                (_, BlobEntry _ _) -> True
+                _ -> False)
+            .| C.map (\(p, BlobEntry o _) -> (p, o))
+            .| C.foldM genStoryLink Map.empty
 
 
 genStoryLink :: (MonadGit r m, HasLgRepo m, MonadMask m, MonadUnliftIO m) 
-             => Map Text [(Int, TreeFilePath)] -> (TreeFilePath, BlobOid) -> m (Map Text [(Int, TreeFilePath)])
+             => Map Text (Map Int TreeFilePath) -> (TreeFilePath, BlobOid) -> m (Map Text (Map Int TreeFilePath))
 genStoryLink map (path, oid) = do
-    c <- catBlob oid
+    c <- catBlobUtf8 oid
     return $ case do
             h <- readHeader c
             name <- _hdrStoryName h
             idx <- _hdrStoryIdx h
             return (name, idx)
         of
-        Just (name, idx) -> Map.insertWith (<>) name [(idx, path)] map
+        Just (name, idx) -> Map.insertWith (<>) name (Map.singleton idx path) map
         Nothing -> map
 
 
-hibachiBuild :: FilePath -> Rules () -> IO ()
-hibachiBuild repo f = shakeArgs so $ do
-    addBuiltinBranchRule
-    addBuiltinModifiedRule
-    f
-  where
-    so = shakeOptions{shakeExtra = addShakeExtra (RepoPath repo) $ shakeExtra shakeOptions}
-
-writeFile' :: MonadIO m => FilePath -> Text -> m ()
-writeFile' p x = liftIO $ TIO.writeFile p x
-
 fromBranch :: BranchName -> FilePath -> Action Text
-fromBranch branch path = do
-    c <- branchNeed branch
+fromBranch b p = fromBranch' b (BS.pack p)
+
+fromBranch' :: BranchName -> TreeFilePath -> Action Text
+fromBranch' branch path = do
+    c <- getBranchHead branch
     repo <- getRepo
     liftIO $ withRepository lgFactory repo $ do
         t <- lookupTree $ commitTree c
-        treeEntry t (BS.pack path) >>= \case
+        treeEntry t path >>= \case
             Just (BlobEntry o _) -> catBlobUtf8 o
-            Just _ -> fail ("Path " <> path <> " exists but is not a file")
-            Nothing -> fail ("Path " <> path <> " does not exist in that branch")
-
-getRepo = getShakeExtra >>= \case
-    Just (RepoPath r) -> return r
-    Nothing -> fail "Repository path isn't defined"
+            Just _ -> fail ("Path " <> BS.unpack path <> " exists but is not a file")
+            Nothing -> fail ("Path " <> BS.unpack path <> " does not exist in that branch")
