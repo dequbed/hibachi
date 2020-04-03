@@ -78,7 +78,7 @@ library:
     - name: rio
       version: ">= 0.1  && <0.2"
       mixin:
-        - (RIO                          as Prelude)
+        - (RIO as RIO)
         - (RIO.List                     as Prelude.List)
         - (RIO.ByteString               as Prelude.ByteString)
         - (RIO.ByteString.Lazy          as Prelude.ByteString.Lazy)
