@@ -58,15 +58,81 @@ default-extensions:
   - TypeFamilyDependencies
   - TypeOperators
 
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wpartial-fields
+  - -Wredundant-constraints
+
+
 library:
   source-dirs: src
   dependencies:
-    - base            >= 4.12 && <4.13
+    - name: base
+      version: ">= 4.12 && <4.13"
+      mixin:
+        - hiding (Prelude)
+    - name: rio
+      version: ">= 0.1  && <0.2"
+      mixin:
+        - (RIO                          as Prelude)
+        - (RIO.List                     as Prelude.List)
+        - (RIO.ByteString               as Prelude.ByteString)
+        - (RIO.ByteString.Lazy          as Prelude.ByteString.Lazy)
+        - (RIO.ByteString.Lazy.Partial  as Prelude.ByteString.Lazy.Partial)
+        - (RIO.ByteString.Partial       as Prelude.ByteString.Partial)
+        - (RIO.Char                     as Prelude.Char)
+        - (RIO.Char.Partial             as Prelude.Char.Partial)
+        - (RIO.Deque                    as Prelude.Deque)
+        - (RIO.Directory                as Prelude.Directory)
+        - (RIO.File                     as Prelude.File)
+        - (RIO.FilePath                 as Prelude.FilePath)
+        - (RIO.HashMap                  as Prelude.HashMap)
+        - (RIO.HashMap.Partial          as Prelude.HashMap.Partial)
+        - (RIO.HashSet                  as Prelude.HashSet)
+        - (RIO.List                     as Prelude.List)
+        - (RIO.List.Partial             as Prelude.List.Partial)
+        - (RIO.Map                      as Prelude.Map)
+        - (RIO.Map.Partial              as Prelude.Map.Partial)
+        - (RIO.Map.Unchecked            as Prelude.Map.Unchecked)
+        - (RIO.NonEmpty                 as Prelude.NonEmpty)
+        - (RIO.NonEmpty.Partial         as Prelude.NonEmpty.Partial)
+        - (RIO.Partial                  as Prelude.Partial)
+        - (RIO.Prelude                  as Prelude.Prelude)
+        - (RIO.Prelude.Simple           as Prelude.Prelude.Simple)
+        - (RIO.Prelude.Types            as Prelude.Prelude.Types)
+        - (RIO.Process                  as Prelude.Process)
+        - (RIO.Seq                      as Prelude.Seq)
+        - (RIO.Set                      as Prelude.Set)
+        - (RIO.Set.Partial              as Prelude.Set.Partial)
+        - (RIO.Set.Unchecked            as Prelude.Set.Unchecked)
+        - (RIO.State                    as Prelude.State)
+        - (RIO.Text                     as Prelude.Text)
+        - (RIO.Text.Lazy                as Prelude.Text.Lazy)
+        - (RIO.Text.Lazy.Partial        as Prelude.Text.Lazy.Partial)
+        - (RIO.Text.Partial             as Prelude.Text.Partial)
+        - (RIO.Time                     as Prelude.Time)
+        - (RIO.Vector                   as Prelude.Vector)
+        - (RIO.Vector.Boxed             as Prelude.Vector.Boxed)
+        - (RIO.Vector.Boxed.Partial     as Prelude.Vector.Boxed.Partial)
+        - (RIO.Vector.Boxed.Unsafe      as Prelude.Vector.Boxed.Unsafe)
+        - (RIO.Vector.Partial           as Prelude.Vector.Partial)
+        - (RIO.Vector.Storable          as Prelude.Vector.Storable)
+        - (RIO.Vector.Storable.Partial  as Prelude.Vector.Storable.Partial)
+        - (RIO.Vector.Storable.Unsafe   as Prelude.Vector.Storable.Unsafe)
+        - (RIO.Vector.Unboxed           as Prelude.Vector.Unboxed)
+        - (RIO.Vector.Unboxed.Partial   as Prelude.Vector.Unboxed.Partial)
+        - (RIO.Vector.Unboxed.Unsafe    as Prelude.Vector.Unboxed.Unsafe)
+        - (RIO.Vector.Unsafe            as Prelude.Vector.Unsafe)
+        - (RIO.Writer                   as Prelude.Writer)
     - text            >= 1.2  && <1.3
     - bytestring      >= 0.10 && <0.11
     - lucid           >= 2.9  && <2.10
     - cmark           >= 0.6  && <0.7
-    - cmark-lucid     >= 0.1 && <0.2
+    - cmark-lucid     >= 0.1  && <0.2
     - clay            >= 0.13 && <0.14
     - gitlib          >= 3.1  && <3.2
     - gitlib-libgit2  >= 3.1  && <3.2
@@ -80,6 +146,7 @@ library:
     - containers      >= 0.6  && <0.7
     - yaml            >= 0.11 && <0.12
     - either          >= 5.0  && <5.1
+    - split           >= 0.2  && <0.3
     - HUnit
 
 executables:
@@ -87,16 +154,24 @@ executables:
     main: Main.hs
     source-dirs: app
     dependencies:
-      - base          >= 4.12 && <4.13
+      - name: base
+        version: ">= 4.12 && <4.13"
+        mixin:
+          - hiding (Prelude)
+      - name: rio
+        version: ">= 0.1  && <0.2"
+        mixin:
+          - (RIO as Prelude)
       - text          >= 1.2  && <1.3
       - bytestring    >= 0.10 && <0.11
       - lucid         >= 2.9  && <2.10
       - cmark         >= 0.6  && <0.7
-      - cmark-lucid   >= 0.1 && <0.2
+      - cmark-lucid   >= 0.1  && <0.2
       - clay          >= 0.13 && <0.14
       - skylighting   >= 0.8  && <0.9
       - time          >= 1.8  && <1.9
       - lens          >= 4    && <5
+      - containers    >= 0.6  && <0.7
       - Hibachi
 
 tests:
