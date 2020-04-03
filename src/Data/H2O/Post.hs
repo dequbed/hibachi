@@ -13,7 +13,7 @@ import Data.Text.Encoding (encodeUtf8)
 
 import Data.List.Split
 
-import Data.H2O
+import Data.H2O.Types (Post, Meta, PostHeader, buildPost)
 import Data.H2O.ReadTime (calculateReadTime)
 
 type Error = Text
