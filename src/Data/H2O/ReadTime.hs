@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 module Data.H2O.ReadTime
     ( ReadTime(..)
     , addTime
@@ -15,6 +16,8 @@ import Data.Time
 import Data.Time.Clock
 import Data.Time.Format
 
+import Data.Binary
+
 instance Eq ZonedTime where
     a == b = zonedTimeToUTC a == zonedTimeToUTC b
 instance Ord ZonedTime where
@@ -24,7 +27,7 @@ data ReadTime = ReadTime
               { numWords  :: Int
               , numImages :: Int
               }
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Generic, Hashable)
 instance Show ReadTime where
     show r@(ReadTime w i) =
         let m = minutesReadTime r in
@@ -34,6 +37,9 @@ instance Show ReadTime where
             ++ (show w) ++ " words" ++
             -- Don't mention images if there are none
             (if i /= 0 then " and " ++ (show i) ++ "images)" else ")")
+
+instance Binary ReadTime
+instance NFData ReadTime
 
 addTime :: ReadTime -> ReadTime -> ReadTime
 addTime (ReadTime mw mi) (ReadTime nw ni) = ReadTime (mw + nw) (mi + ni)

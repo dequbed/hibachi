@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveAnyClass #-}
 module Data.H2O.Types
     ( buildPost
     , Post(..)
@@ -31,12 +32,14 @@ module Data.H2O.Types
     , hdrAbstract
     ) where
 
+import qualified Prelude.ByteString.Lazy as BL
+
 import Development.Shake.Classes
 import GHC.Generics (Generic)
-import Data.Binary (Binary, put, get)
+import Data.Binary (Binary, put, get, encode, decode)
 import Data.Binary.Put
 import Data.Binary.Get
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Data.Time (UTCTime(..), Day(..), DiffTime)
 import Data.Time.Clock (diffTimeToPicoseconds, picosecondsToDiffTime)
 import Lucid (Html)
@@ -46,9 +49,11 @@ import Control.Monad.IO.Class
 import Data.Map (Map)
 import Git (TreeFilePath)
 
+import Text.Read (read)
+
 import CMark
 
-import Data.Yaml
+import Data.Yaml hiding (encode, decode)
 
 import Control.Lens (makeLenses)
 
@@ -99,8 +104,11 @@ instance FromJSON PostHeader where
 data Story = Story
     { _storyName :: Text
     , _storyPart :: Int
-    } deriving (Eq, Ord, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic, Hashable)
 makeLenses ''Story
+
+instance Binary Story
+instance NFData Story
 
 -- | Post is the central data structure of Hibachi
 data Post = Post
@@ -116,6 +124,37 @@ data Post = Post
     , _story :: Maybe Story -- ^ If the post is part of a story, keep that data here
     } deriving (Eq, Ord, Show, Generic)
 makeLenses ''Post
+
+instance Binary PosInfo
+instance Binary NodeType
+instance Binary ListAttributes
+instance Binary ListType
+instance Binary DelimType
+instance Binary Node
+instance Binary Post
+
+instance NFData PosInfo
+instance NFData NodeType
+instance NFData ListAttributes
+instance NFData ListType
+instance NFData DelimType
+instance NFData Node
+instance NFData Post
+
+instance Hashable Post where
+    hashWithSalt :: Int -> Post -> Int
+    hashWithSalt s (Post title abstract content readtime tags author email posted modified story) = 
+        s `hashWithSalt`
+        show title `hashWithSalt`
+        show abstract `hashWithSalt`
+        show content `hashWithSalt`
+        readtime `hashWithSalt`
+        tags `hashWithSalt`
+        author `hashWithSalt`
+        email `hashWithSalt`
+        show posted `hashWithSalt`
+        show modified `hashWithSalt`
+        story
 
 -- | Build a Blog post from its parts
 buildPost :: Meta -> PostHeader -> Node -> Post
