@@ -1,4 +1,8 @@
-module Templates where
+module Templates
+    ( renderPostText
+    , renderIndex
+    , aboutTemplate
+    ) where
 
 import Prelude hiding (for_)
 
@@ -21,17 +25,20 @@ postTemplate m t = renderHtmlT . renderPost <$> readPost m t
 storyTemplate :: Story -> Text
 storyTemplate = pack . show
 
-indexTemplate :: [Post] -> Text
-indexTemplate = renderHtmlT . renderIndex
+renderIndex :: [(FilePath, Post)] -> Text
+renderIndex = renderHtmlT . renderIndexHtml
 
-renderIndex :: [Post] -> Html ()
-renderIndex ps = htmlPre $ do
+renderIndexHtml :: [(FilePath, Post)] -> Html ()
+renderIndexHtml ps = htmlPre $ do
         htmlHeadM (return ())
-        htmlBody $ mapM_ renderPostlink ps
+        htmlBody $ mapM_ (uncurry renderPostlink) ps
 
 htmlPre f = do
     doctype_
     html_ [lang_ "en"] f
+
+renderPostText :: Post -> Text
+renderPostText = renderHtmlT . renderPost
 
 renderPost :: Post -> Html ()
 renderPost post = renderPost'
@@ -62,9 +69,12 @@ renderAbout about =
                 $ renderNode []
                 $ apply dropHeadingLevel about
 
-renderPostlink :: Post -> Html ()
-renderPostlink post =
-    a_ [class_ "postlink", href_ ""] $ article_ [class_ "post"] $ do
+pathToLink :: FilePath -> Text
+pathToLink = pack
+
+renderPostlink :: FilePath -> Post -> Html ()
+renderPostlink path post =
+    a_ [class_ "postlink", href_ (pathToLink path)] $ article_ [class_ "post"] $ do
         postHeader (post^.title) (post^.readtime)
         renderNode [] (post^.abstract)
         postFooter (post^.posted) (post^.tags) (post^.author)

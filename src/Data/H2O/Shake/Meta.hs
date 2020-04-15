@@ -4,6 +4,7 @@ module Data.H2O.Shake.Meta
     , metaMap
     , metaMapCommit
     , metaMapBranch
+    , metaFromCommit
     ) where
 
 import qualified Prelude.Map as Map

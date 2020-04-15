@@ -1,5 +1,7 @@
 module Data.H2O.Post
-    where
+    ( readPost'
+    , readPost
+    ) where
 
 import Prelude hiding (lines, unlines)
 

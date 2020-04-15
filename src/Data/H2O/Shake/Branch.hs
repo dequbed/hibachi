@@ -4,6 +4,7 @@ module Data.H2O.Shake.Branch
     , branchTree
     , getBranchHead
     , getVersionedFile
+    , getVersionedFile'
     ) where
 
 import qualified Prelude.Map as Map
