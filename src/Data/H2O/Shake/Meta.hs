@@ -40,6 +40,8 @@ import Data.H2O.Types (Meta(..), PostHeader(..), Post(..), Story(..), storyName,
 import Data.H2O.Shake
 import Data.H2O.Shake.Branch
 
+import System.IO (print)
+
 instance NFData SHA where
     rnf a = seq a ()
 instance Binary SHA where
@@ -74,19 +76,43 @@ addMetaMapRule = addBuiltinRule noLint noIdentity run
             runConduit $ sourceObjects ohave oneed False
                 .| C.mapM (\(CommitObjOid c) -> return c)
                 .| C.mapM lookupCommit
-                .| C.foldM updateAll map
-        return $ RunResult ChangedRecomputeDiff (BL.toStrict $ encode (have, m)) m
+                .| C.foldM updateAll (Map.empty, map)
+        return $ RunResult ChangedRecomputeDiff (BL.toStrict $ encode (have, snd m)) $ snd m
 
 updateAll :: (MonadGit r m, HasLgRepo m, MonadMask m, MonadUnliftIO m) 
-          => Map TreeFilePath Meta -> Commit -> m (Map TreeFilePath Meta)
-updateAll m c = do
+          => (Map BlobOid (TreeFilePath, Meta), Map TreeFilePath Meta)
+          -> Commit
+          -> m (Map BlobOid (TreeFilePath, Meta), Map TreeFilePath Meta)
+updateAll maps c = do
     let meta = metaFromCommit c
     tree <- lookupTree $ commitTree c
     runConduit $ sourceTreeEntries tree 
-        .| C.foldl (update meta) m
+        .| C.foldl (update meta) maps
   where 
-    update :: Meta -> Map TreeFilePath Meta -> (TreeFilePath, TreeEntry) -> Map TreeFilePath Meta
-    update meta map (path, BlobEntry _ _) = Map.insertWith combine path meta map
+    update 
+        :: Meta 
+        -> (Map BlobOid (TreeFilePath, Meta), Map TreeFilePath Meta)
+        -> (TreeFilePath, TreeEntry) 
+        -> (Map BlobOid (TreeFilePath, Meta), Map TreeFilePath Meta)
+    update meta (oidmap, map) (path, BlobEntry oid _) = case Map.lookup oid oidmap of
+        -- If we have already seen that OID the blob didn't change. The path maybe did however.
+        -- If the path changed we need to move the meta to the new path. The old entry needs to be
+        -- removed so that a later update doesn't by mistake combine the metas of two different
+        -- posts that happen to had the same path at different times.
+
+        -- This is a move.
+        -- Find the old meta, insert it at the new path (if there is any meta there it's now
+        -- invalid.), delete from the old path.
+        Just (oldpath, oldmeta) -> do
+            let newmetamap = Map.insert path oldmeta $ Map.delete oldpath map
+            (oidmap, newmetamap)
+
+        -- This is a new or changed file
+        -- If it's a new file there is no meta at that path. If its a changed file there is.
+        Nothing -> do
+            let newmetamap = Map.insertWith combine path meta map
+            let newoidmap = Map.insert oid (path, meta) oidmap
+            (newoidmap, newmetamap)
     update _ m _ = m
 
     -- Combining function: Author, Email & Initial posted date are kept, last modified date is

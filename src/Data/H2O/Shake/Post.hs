@@ -13,6 +13,7 @@ module Data.H2O.Shake.Post
 
 import qualified Prelude.List as L
 import qualified Prelude.Map as Map
+import qualified Prelude.Map.Partial as Map
 import qualified Prelude.ByteString as B
 import qualified Prelude.ByteString.Lazy as BL
 
@@ -32,7 +33,7 @@ import Data.Binary.Get
 
 import Data.H2O.Types (Post(..), story, storyName, Meta)
 import Data.H2O.Shake
-import Data.H2O.Shake.Meta (metaFromCommit)
+import Data.H2O.Shake.Meta (metaMap)
 import Data.H2O.Shake.Branch
 import Data.H2O.Post (readPost')
 
@@ -183,8 +184,10 @@ addPostReadRule = addBuiltinRule noLint noIdentity run
         if mode == RunDependenciesSame && Just ver == (readVersion <$> old) && Just s == (generatedCommit <$> old) then
             return $ RunResult ChangedNothing (fromJust oldBin) $ ReadPostR (readPost $ fromJust old)
         else do
-            let m = metaFromCommit c
-            t <- getVersionedFile' (branch key) (readPath key)
+            let path = readPath key
+            metamap <- metaMap s
+            let m = (metamap Map.! path)
+            t <- getVersionedFile' (branch key) path
             post <- act m t
             let new = BL.toStrict $ runPut $ put $ ReadPostA ver s post
             return $ RunResult ChangedRecomputeDiff new $ ReadPostR post
