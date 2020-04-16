@@ -66,6 +66,7 @@ typesetting = do
         backgroundColor "#3a3e4f"
     h1 <> h2 <> h3 <> h4 <> h5 <> h6 ? do
         "font-variant-caps" -: "small-caps"
+    h2 <> h3 <> h4 <> h5 <> h6 ? do
         marginTop (em 1)
         textIndent $ indent (em 1)
 
@@ -89,7 +90,9 @@ typesetting = do
         textIndent $ indent (em 1)
         marginTop nil
 
-    article |> p#firstLetter#nthOfType "1" ? do
+    ".abstract" ?
+        minHeight (rem 2.1)
+    ".abstract" |> p#firstLetter#nthOfType "1" ? do
         color "#8e16a6"
         float floatLeft
         fontFamily ["Dearest"] [cursive]
@@ -98,6 +101,8 @@ typesetting = do
         textTransform uppercase
         marginTop (rem 0.25)
         marginRight (rem 0.3)
+
+    ".author" ? marginLeft (em 1)
 
     blockquote ? margin (em 1.5) (em 1.5) (em 1.5) (em 1.5)
 
@@ -287,7 +292,7 @@ post = do
 
     ".post" ? do
         marginBottom (px 20)
-        padding (px 20) (px 20) (px 20) (px 20)
+        padding (px 20) (px 20) (px 10) (px 20)
         backgroundColor "#f0f0f0"
         color "#0e0e0e"
 

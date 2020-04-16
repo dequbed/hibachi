@@ -76,7 +76,7 @@ renderPostlink :: FilePath -> Post -> Html ()
 renderPostlink path post =
     a_ [class_ "postlink", href_ (pathToLink path)] $ article_ [class_ "post"] $ do
         postHeader (post^.title) (post^.readtime)
-        renderNode [] (post^.abstract)
+        div_ [class_ "abstract"] $ renderNode [] (post^.abstract)
         postFooter (post^.posted) (post^.tags) (post^.author)
 
 -- renderIndex :: [PostCommon] -> Html ()
