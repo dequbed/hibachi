@@ -5,6 +5,8 @@ import Prelude.Directory
 import qualified Prelude.List as L
 import Data.ByteString.Char8 as BL
 
+import Lens.Micro
+
 import Crypto.Hash
 
 import Data.H2O.Shake
@@ -54,13 +56,11 @@ main = hibachiBuild "/home/glr/Documents/Blog/posts" $ do
 
         writeFileD path $ renderPostText p
 
-        
-
         return $ pathToLink path)
 
     genBranchIndex "posts"
 
-    writeIndex $ writeFileD indexhtml . renderIndex
+    writeIndex $ writeFileD indexhtml . renderIndex . L.reverse . L.sortOn (^._2.posted)
 
 -- | Write a file, creating the directory containing it if necessary
 writeFileD :: FilePath -> Text -> Action ()
