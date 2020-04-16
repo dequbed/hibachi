@@ -28,6 +28,8 @@ import Git hiding (writeIndex)
 import Git.Types (TreeEntry(..), sourceTreeEntries)
 import Git.Libgit2 (lgFactory)
 
+import System.IO (print)
+
 newtype IndexRule = IndexRule ([(FilePath, Post)] -> Action ())
     deriving Typeable
 
