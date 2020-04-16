@@ -2,6 +2,7 @@ module Main (main) where
 
 import Prelude.FilePath
 import Prelude.Directory
+import qualified Prelude.List as L
 import Data.ByteString.Char8 as BL
 
 import Crypto.Hash
@@ -48,19 +49,18 @@ main = hibachiBuild "/home/glr/Documents/Blog/posts" $ do
     want [robotstxt, abouthtml, stylecss]
 
     writePost (\p -> do
-        let filename = Prelude.take 10 $ genFileN $ p^.title
+        let filename = genFileN $ p^.title
             path = basePostDir </> filename <.> "html"
 
         writeFileD path $ renderPostText p
 
-        liftIO $ print path
+        
 
-        return path)
+        return $ pathToLink path)
 
     genBranchIndex "posts"
-    writeIndex (\p -> do
-        liftIO $ print p
-        writeFileD indexhtml $ renderIndex p)
+
+    writeIndex $ writeFileD indexhtml . renderIndex
 
 -- | Write a file, creating the directory containing it if necessary
 writeFileD :: FilePath -> Text -> Action ()
@@ -69,6 +69,9 @@ writeFileD file content = do
     writeFileUtf8 file content
 
 genFileN :: Show a => a -> String
-genFileN = show . run . BL.pack . show
+genFileN = Prelude.take 10 . show . run . BL.pack . show
     where run :: BL.ByteString -> Digest Whirlpool
           run = hash
+
+pathToLink :: FilePath -> FilePath
+pathToLink = joinPath . L.drop 1 . splitPath . dropExtension
