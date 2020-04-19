@@ -31,6 +31,7 @@ ourStyle = do
     lists
     logo
     pagination
+    project
 
 fonts :: Css
 fonts = mf
@@ -93,7 +94,7 @@ typesetting = do
     ".abstract" ?
         minHeight (rem 2.1)
     ".abstract" |> p#firstLetter#nthOfType "1" ? do
-        color "#8e16a6"
+        color myViolet
         float floatLeft
         fontFamily ["Dearest"] [cursive]
         fontSize (rem 3)
@@ -101,8 +102,6 @@ typesetting = do
         textTransform uppercase
         marginTop (rem 0.25)
         marginRight (rem 0.3)
-
-    ".author" ? marginLeft (em 1)
 
     blockquote ? margin (em 1.5) (em 1.5) (em 1.5) (em 1.5)
 
@@ -156,14 +155,14 @@ navbar = do
     ".mobile-bar" ** ".navlink" ? do
         "align-self" -: "right"
 
-    query Media.screen [(Media.minWidth (rem 49))] $ do
+    query Media.screen [Media.minWidth (rem 49)] $
         ".mobile-bar" ? display none
 
     ".navlink" ? do
         "font-variant-caps" -: "small-caps"
         display flex
         justifyContent center
-    ".navlink" ** ".navicon" ? do
+    ".navlink" ** ".navicon" ?
         marginRight (em 0.4)
 
     "#navbar" ? zIndex 10
@@ -216,7 +215,7 @@ navbar = do
     nav ** ".spacer" ? do
         "flex" -: "1"
 
-    query Media.screen [(Media.minWidth (rem 49))] $ nav ? do
+    query Media.screen [Media.minWidth (rem 49)] $ nav ? do
         position fixed
         left nil
         right nil
@@ -226,8 +225,8 @@ navbar = do
         marginLeft nil
         flexDirection row
 
-    query Media.screen [(Media.minWidth (rem 49))] $ do
-        nav ** ul ? do
+    query Media.screen [Media.minWidth (rem 49)] $ do
+        nav ** ul ?
             flexDirection row
         nav ** ul ** a ? do
             "flex" -: "1"
@@ -236,46 +235,57 @@ navbar = do
     ".toggle-nav:checked ~ nav" ? do
         "will-change" -: "transform"
         "transform" -: "translateX(100%)"
-    query Media.screen [(Media.minWidth (rem 49))] $ do
-        ".toggle-nav:checked ~ nav" ? do
-            transform $ translateX nil
+    query Media.screen [Media.minWidth (rem 49)] $
+        ".toggle-nav:checked ~ nav" ?
+            (transform $ translateX nil) :: Css
 
     ".toggle-nav:checked ~ main" ? do
         "will-change" -: "transform"
         "transform" -: "translateX(70%)"
-    query Media.screen [(Media.minWidth (rem 49))] $ do
-        ".toggle-nav:checked ~ nav" ? do
-            transform $ translateX nil
+    query Media.screen [Media.minWidth (rem 49)] $
+        ".toggle-nav:checked ~ nav" ?
+            (transform $ translateX nil) :: Css
 
     ".toggle-nav:checked ~ #footer" ? do
         "will-change" -: "transform"
         "transform" -: "translateX(70%)"
-    query Media.screen [(Media.minWidth (rem 49))] $ do
+    query Media.screen [Media.minWidth (rem 49)] $
         ".toggle-nav:checked ~ #footer" ? do
-            transform $ translateX nil
+            (transform $ translateX nil) :: Css
 
     ".toggle-nav"#checked |+ ".mobile-bar" ? do
         "will-change" -: "transform"
         "transform" -: "translateX(70%)"
-    query Media.screen [(Media.minWidth (rem 49))] $ do
-        (".toggle-nav"#checked) |+ ".mobile-bar" ? do
-            transform $ rotate (deg 180)
+    query Media.screen [Media.minWidth (rem 49)] $
+        ".toggle-nav"#checked |+ ".mobile-bar" ?
+            (transform $ rotate (deg 180)) :: Css
 
 mainElement :: Css
 mainElement = do
     main_ ? do
         "flex" -: "1"
         position relative
-        paddingTop (rem 5.5)
+        paddingTop (rem 5.6)
         margin nil auto auto auto
         transition "transform" (ms 300) ease none
         width (pct 100)
         maxWidth (em 50)
 
-    query Media.screen [(Media.minWidth (px 768))] $ do
+    query Media.screen [Media.minWidth (px 768)] $
         main_ ? do
             paddingLeft (px 20)
             paddingRight (px 20)
+
+myFontColor :: Color
+myFontColor = parse "#0e0e0e"
+myViolet :: Color
+myViolet = parse "#8e16a6"
+myBackgroundColor :: Color
+myBackgroundColor = parse "#f0f0f0"
+
+violetOutline :: Css
+violetOutline = outline solid (px 2) myViolet
+
 
 post :: Css
 post = do
@@ -286,15 +296,14 @@ post = do
     ".postlink"#hover ?
         border none none none
 
-    query Media.screen [(Media.minWidth (px 768))] $ do
-        ".postlink"#hover ?
-            outline solid (px 2) "#8e16a6"
+    query Media.screen [Media.minWidth (px 768)] $
+        ".postlink"#hover ?  violetOutline
 
     ".post" ? do
         marginBottom (px 20)
         padding (px 20) (px 20) (px 10) (px 20)
-        backgroundColor "#f0f0f0"
-        color "#0e0e0e"
+        backgroundColor myBackgroundColor
+        color myFontColor
 
     ".post" |> header ** ".readtime" ? do
         paddingLeft (px 5)
@@ -309,17 +318,12 @@ post = do
         fontSize (rem 0.8)
 
     ".tags" ? do
-        marginLeft (em 0.5)
-        marginRight (em 0.5)
+        marginRight (em 0.3)
         padding nil nil nil nil
         "list-style" -: "none"
         display inlineFlex
 
-    time ? do
-        marginLeft (em 0.5)
-        marginRight (em 0.5)
-
-    ".tag" ? do
+    ".tag" ?
         marginLeft (px 5)
 
 footerElement :: Css
@@ -358,7 +362,7 @@ links = do
 sourceCode :: Css
 sourceCode = do
     ".sourceLine" ** a ? do
-        color "#0e0e0e"
+        color myFontColor
         textDecoration none
     (".sourceLine" ** a#focus) <>
         (".sourceLine" ** a#hover) ? do
@@ -373,7 +377,7 @@ lists = do
     ol ? ("list-style" -: "decimal inside")
 
 pagination :: Css
-pagination = do
+pagination =
     ".pagination" ? do
         display inlineBlock
         "list-style" -: "none"
@@ -386,6 +390,31 @@ pagination = do
 logo :: Css
 logo = ".logo" ?
     height (rem 5.5)
+
+project :: Css
+project = do
+    ".project" ? do
+        display flex
+        flexDirection row
+        marginBottom (px 20)
+    ".project"#hover ? violetOutline
+    
+    ".project-image" ? do
+        height (em 18)
+        "max-width" -: "unset"
+    ".project-header" ? 
+        color myViolet
+    ".project-information" ? do
+        width (pct 100)
+        background myBackgroundColor
+        padding (px 20) (px 20) (px 10) (px 20)
+        display flex
+        "flex" -: "content"
+        flexDirection column
+    ".project-description" ? do
+        "flex" -: "max-content"
+        marginTop (em 1)
+        marginBottom (em 1)
 
 resets :: Css
 resets = do
@@ -421,7 +450,7 @@ boxreset = do
     star <> star#before <> star#after ? boxSizing inherit
 
 mediareset :: Css
-mediareset = do
+mediareset =
     img <> embed <> iframe <> object <> audio <> video ? do
         height auto
         maxWidth (pct 100)

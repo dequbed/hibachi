@@ -2,6 +2,7 @@ module Main (main) where
 
 import Prelude.FilePath
 import Prelude.Directory
+import Prelude.Text as T
 import qualified Prelude.List as L
 import Data.ByteString.Char8 as BL
 
@@ -14,6 +15,7 @@ import Data.H2O.Shake.Init
 import Data.H2O.Shake.Post
 import Data.H2O.Shake.Branch
 import Data.H2O.Shake.Index
+import Data.H2O.Shake.Tags
 import Data.H2O.Post
 import Data.H2O.Types
 
@@ -35,7 +37,10 @@ stylecss :: FilePath
 stylecss = baseDir </> "css" </> "default.css"
 indexhtml :: FilePath
 indexhtml = baseDir </> "index.html"
-
+tagsindex :: String -> FilePath
+tagsindex t = baseDir </> "tags" </> t <.> "html"
+feedhtml :: FilePath
+feedhtml = baseDir </> "feed.html"
 basePostDir :: FilePath
 basePostDir = baseDir </> "p"
 
@@ -47,10 +52,12 @@ main = hibachiBuild "/home/glr/Documents/Blog/posts" $ do
         writeFileD out =<< aboutTemplate <$> getVersionedFile "static" "about.md"
     stylecss %> \out ->
         writeFileD out styleText
+    feedhtml %> \out ->
+        writeFileD out feedTemplateTxt
 
     want [robotstxt, abouthtml, stylecss]
 
-    writePost (\p -> do
+    versioned 2 $ writePost (\p -> do
         let filename = genFileN $ p^.title
             path = basePostDir </> filename <.> "html"
 
@@ -61,6 +68,10 @@ main = hibachiBuild "/home/glr/Documents/Blog/posts" $ do
     genBranchIndex "posts"
 
     writeIndex $ writeFileD indexhtml . renderIndex . L.reverse . L.sortOn (^._2.posted)
+
+    genTagIndex "posts"
+
+    writeTags (\t p -> writeFileD (tagsindex $ T.unpack t) $ renderTagIndex t $ L.reverse $ L.sortOn (^._2.posted) p)
 
 -- | Write a file, creating the directory containing it if necessary
 writeFileD :: FilePath -> Text -> Action ()
