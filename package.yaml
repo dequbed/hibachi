@@ -175,6 +175,7 @@ executables:
       - text          >= 1.2  && <1.3
       - time          >= 1.8  && <1.9
       - microlens     >= 0.4  && <0.5
+      - filepath      >= 1.4  && <1.5
       - Hibachi
 
 tests:

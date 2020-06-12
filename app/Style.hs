@@ -398,10 +398,13 @@ project = do
         flexDirection row
         marginBottom (px 20)
     ".project"#hover ? violetOutline
+    -- Switch around every other listing (image on the right, text on the left)
+    -- This breaks the monotony and hides that pictures aren't all the same proportions
+    ".project"#nthChild "2n+0" ? flexDirection rowReverse
     
     ".project-image" ? do
-        height (em 18)
-        "max-width" -: "unset"
+        width (pct 100)
+        minWidth (em 10)
     ".project-header" ? 
         color myViolet
     ".project-information" ? do
@@ -409,7 +412,6 @@ project = do
         background myBackgroundColor
         padding (px 20) (px 20) (px 10) (px 20)
         display flex
-        "flex" -: "content"
         flexDirection column
     ".project-description" ? do
         "flex" -: "max-content"

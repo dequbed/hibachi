@@ -74,7 +74,7 @@ genTagIndex branch = action $ do
     mapM_ needT $ Map.toList m
   where
     toMap :: [(FilePath, Post)] -> Map Text [(FilePath, Post)]
-    toMap list = Map.fromListWith (++) $ L.concat $ map (\e@(_, (Post _ _ _ _ tags _ _ _ _ _)) -> zip tags $ L.repeat [e]) list
+    toMap list = Map.fromListWith (++) $ L.concat $ map (\e@(_, Post _ _ _ _ tags _ _ _ _ _) -> zip tags $ L.repeat [e]) list
     needT (tag, posts) = needTags posts tag
 
 addTagBuildRule :: Rules ()
