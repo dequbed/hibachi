@@ -403,8 +403,12 @@ project = do
     ".project"#nthChild "2n+0" ? flexDirection rowReverse
     
     ".project-image" ? do
-        width (pct 100)
+        maxWidth (pct 100)
         minWidth (em 10)
+        height (pct 100)
+    ".project-picture" ? do
+        flexGrow 1
+        flexShrink 3
     ".project-header" ? 
         color myViolet
     ".project-information" ? do
@@ -413,6 +417,8 @@ project = do
         padding (px 20) (px 20) (px 10) (px 20)
         display flex
         flexDirection column
+        flexGrow 3
+        flexShrink 1
     ".project-description" ? do
         "flex" -: "max-content"
         marginTop (em 1)

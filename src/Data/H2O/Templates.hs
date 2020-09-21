@@ -1,5 +1,6 @@
 module Data.H2O.Templates
     ( module Lucid
+    , module Lucid.Base
     , module CMark
     , module CMark.Lucid
 
@@ -8,6 +9,8 @@ module Data.H2O.Templates
 
     , readCM
     , renderHtmlT
+
+    , picture_
     )
     where
 
@@ -18,6 +21,7 @@ import Data.Text (Text)
 import CMark
 import CMark.Lucid
 import Lucid
+import Lucid.Base
 
 apply :: (Node -> Node) -> Node -> Node
 apply f n = let (Node p t ns) = f n in
@@ -40,3 +44,6 @@ readCM = commonmarkToNode [optSmart]
 
 renderHtmlT :: Html () -> Text
 renderHtmlT = toStrict . renderText
+
+picture_ :: Term arg result => arg -> result
+picture_ = term "picture"

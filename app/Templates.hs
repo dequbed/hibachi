@@ -3,6 +3,7 @@ module Templates
     , renderIndex
     , aboutTemplate
     , renderTagIndex
+    , renderProjects
     , feedTemplateTxt
     ) where
 
@@ -101,10 +102,27 @@ indexTemplate = listView (return ())
 tagsTemplate :: Text -> [(FilePath, Post)] -> Html ()
 tagsTemplate tag = listView (p_ [] $ toHtmlRaw $ tag)
 
+projectsTemplate :: [Project] -> Html ()
+projectsTemplate projectlist = htmlPre $ do
+    htmlHeadM (return ())
+    htmlBody $ do
+        mapM_ renderProject projectlist
+
+renderProject :: Project -> Html ()
+renderProject (Project name order picture desc link) = do
+    article_ [class_ "project"] $ do
+        picture_ [class_ "project-picture"] $ do
+            img_ [makeAttribute "loading" "lazy", makeAttribute "decoding" "async", src_ picture, alt_ "A Picture of the project"]
+        div_ [class_ "project-information"] $ do
+            a_ [href_ link] $ header_ [class_ "project-header"] $ h1_ $ nodeHtml name
+            section_ [class_ "project-description"] $ nodeHtml desc
+            footer_ $ a_ [href_ link] "More Details..."
+
+
 renderPostlink :: FilePath -> Post -> Html ()
 renderPostlink path post =
     article_ [class_ "post"] $ do
-        postHeaderF (a_ [href_ (pathToLink path)] $ toHtmlRaw $ nodeToHtml [] $ apply parToH1 $ post^.title) (post^.title) (post^.readtime) 
+        postHeaderF (a_ [href_ (pathToLink path)] $ nodeHtml $ apply parToH1 $ post^.title) (post^.title) (post^.readtime) 
         div_ [class_ "abstract"] $ do
             renderNode [] (post^.abstract)
             a_ [href_ (pathToLink path)] "More…"
@@ -168,6 +186,9 @@ renderTagIndex t p = renderHtmlT $ tagsTemplate t p
 renderPostText :: Post -> Text
 renderPostText = renderHtmlT . renderPost
 
+renderProjects :: [Project] -> Text
+renderProjects = renderHtmlT . projectsTemplate
+
 pathToLink :: FilePath -> Text
 pathToLink = pack . dropTrailingPathSeparator . makeRelative "/"
 
@@ -179,7 +200,7 @@ parToH1 :: Node -> Node
 parToH1 (Node p t ns) = Node p (parToH1' t) ns
 
 postHeader :: Node -> ReadTime -> Html ()
-postHeader title = postHeaderF (toHtmlRaw $ nodeToHtml [] $ apply parToH1 title) title
+postHeader title = postHeaderF (nodeHtml $ apply parToH1 title) title
 
 postHeaderF :: Html () -> Node -> ReadTime -> Html ()
 postHeaderF h title time =
@@ -190,7 +211,7 @@ postHeaderF h title time =
             toHtml $ " " ++ show time
 
 postShortHeader :: Node -> Html ()
-postShortHeader = header_ . toHtmlRaw . nodeToHtml [] . apply parToH1
+postShortHeader = header_ . nodeHtml . apply parToH1
 
 postFooter :: UTCTime  -> [Text] -> Text -> Html ()
 postFooter posted tags author =
@@ -202,3 +223,6 @@ postFooter posted tags author =
         ul_ [class_ "tags"] $ mapM_ (\t -> li_ [class_ "tag"] $ a_ [href_ $ "/tags/" <> t] $ toHtml t) tags
         "by "
         span_ [class_ "author"] $ toHtml author
+
+nodeHtml :: Node -> Html ()
+nodeHtml = toHtmlRaw . nodeToHtml []

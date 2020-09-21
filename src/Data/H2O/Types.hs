@@ -30,9 +30,26 @@ module Data.H2O.Types
     , hdrTitle
     , hdrTags
     , hdrAbstract
+
+    , buildProject
+    , Project(..)
+    , projName
+    , projIdx
+    , projPicture
+    , projDesc
+    , projLink
+
+    , ProjectHeader(..)
+    , hdrProjName
+    , hdrProjIdx
+    , hdrProjPicture
+    , hdrProjLink
     ) where
 
 import qualified Prelude.ByteString.Lazy as BL
+
+import System.IO
+import System.IO.Unsafe
 
 import Development.Shake.Classes
 import GHC.Generics (Generic)
@@ -169,3 +186,44 @@ buildPost m h content = Post
     (m^.metaPosted)
     (m^.metaModified)
     (Story <$> (h^.hdrStoryName) <*> (h^.hdrStoryIdx))
+
+data ProjectHeader = ProjectHeader
+    { _hdrProjName :: Node
+    , _hdrProjIdx :: Int
+    , _hdrProjPicture :: Text
+    , _hdrProjLink :: Text
+    } deriving (Eq, Ord, Show, Generic)
+makeLenses ''ProjectHeader
+
+instance FromJSON ProjectHeader where
+    parseJSON (Object v) = ProjectHeader
+        <$> fmap (commonmarkToNode []) (v .: "name")
+        <*> v .: "index"
+        <*> v .: "picture"
+        <*> v .: "link"
+
+data Project = Project
+    { _projName :: Node
+    , _projIdx :: Int
+    , _projPicture :: Text
+    , _projDesc :: Node
+    , _projLink :: Text
+    } deriving (Eq, Ord, Show, Generic)
+makeLenses ''Project
+
+buildProject :: ProjectHeader -> Node -> Project
+buildProject (ProjectHeader name idx pic link) desc =
+    Project name idx pic desc link
+
+instance Binary Project
+instance NFData Project
+
+instance Hashable Project where
+    hashWithSalt :: Int -> Project -> Int
+    hashWithSalt s (Project name order picture desc link) =
+        s `hashWithSalt`
+        show name `hashWithSalt`
+        order `hashWithSalt`
+        picture `hashWithSalt`
+        show desc `hashWithSalt`
+        link
