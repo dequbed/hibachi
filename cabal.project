@@ -1,0 +1,11 @@
+source-repository-package
+  type: git
+  location: https://github.com/nickmertin/gitlib.git
+  subdir: gitlib
+
+source-repository-package
+  type: git
+  location: https://github.com/nickmertin/gitlib.git
+  subdir: gitlib-libgit2
+
+packages: ./Hibachi.cabal
