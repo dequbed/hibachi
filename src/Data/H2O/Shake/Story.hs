@@ -74,7 +74,7 @@ genStoryIndex branch = action $ do
     mapM_ needT $ Map.toList m
   where
     toMap :: [(FilePath, Post)] -> Map Text [(FilePath, Post)]
-    toMap list = Map.fromListWith (++) $ L.concat $ map (\e@(_, Post _ _ _ _ _ _ _ _ _ ms) -> case ms of
+    toMap list = Map.fromListWith (++) $ L.concat $ map (\e@(_, p) -> case p^.story of
             Just story -> [(_storyName story, [e])]
             Nothing -> []
         ) list

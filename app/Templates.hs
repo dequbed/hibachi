@@ -132,7 +132,7 @@ renderPost :: Post -> Html ()
 renderPost post = renderPost'
         (post^.author)
         (post^.abstract)
-        []
+        (post^.tags)
         (post^.title)
         (calculateReadTime $ post^.content)
         (post^.content)

@@ -13,6 +13,7 @@ module Data.H2O.Types
     , posted
     , modified
     , story
+    , indexshow
 
     , Story(..)
     , storyName
@@ -30,6 +31,7 @@ module Data.H2O.Types
     , hdrTitle
     , hdrTags
     , hdrAbstract
+    , hdrIndex
 
     , buildProject
     , Project(..)
@@ -101,11 +103,19 @@ instance Binary Meta
 
 -- | Each post has a YAML header that contains information about the post
 data PostHeader = PostHeader
-    { _hdrStoryName :: Maybe Text
+    { _hdrStoryName :: Maybe Text 
+    -- ^ Name of the story this post is part of — if any
     , _hdrStoryIdx :: Maybe Int
+    -- ^ If part of a story, what part is this?
     , _hdrTitle :: Node
+    -- ^ Title of the post. A Node because it can be full commonmark
     , _hdrTags :: [Text]
+    -- ^ Tags to file this post under. It's the job of the library consumer to
+    -- actually provide tag-based sorting
     , _hdrAbstract :: Node
+    -- ^ A short abstract. Can be shown in a posting overview
+    , _hdrIndex :: Bool
+    -- ^ Put this post on the index or nah? Defaults to Yes.
     } deriving (Eq, Ord, Show, Generic)
 makeLenses ''PostHeader
 
@@ -116,6 +126,7 @@ instance FromJSON PostHeader where
         <*> fmap (commonmarkToNode []) (v .: "title")
         <*> v .:? "tags" .!= []
         <*> fmap (commonmarkToNode []) (v .: "abstract")
+        <*> v .:? "index" .!= True
 
 -- | A Story is generally just a list of its parts, identified by a shared story name.
 data Story = Story
@@ -139,6 +150,7 @@ data Post = Post
     , _posted :: UTCTime -- ^ Time this post was first created, read from git commit
     , _modified :: UTCTime -- ^ Time this post was last modified, read from git commit
     , _story :: Maybe Story -- ^ If the post is part of a story, keep that data here
+    , _indexshow :: Bool
     } deriving (Eq, Ord, Show, Generic)
 makeLenses ''Post
 
@@ -160,7 +172,7 @@ instance NFData Post
 
 instance Hashable Post where
     hashWithSalt :: Int -> Post -> Int
-    hashWithSalt s (Post title abstract content readtime tags author email posted modified story) = 
+    hashWithSalt s (Post title abstract content readtime tags author email posted modified story index) = 
         s `hashWithSalt`
         show title `hashWithSalt`
         show abstract `hashWithSalt`
@@ -171,7 +183,8 @@ instance Hashable Post where
         email `hashWithSalt`
         show posted `hashWithSalt`
         show modified `hashWithSalt`
-        story
+        story `hashWithSalt`
+        index
 
 -- | Build a Blog post from its parts
 buildPost :: Meta -> PostHeader -> Node -> Post
@@ -186,6 +199,7 @@ buildPost m h content = Post
     (m^.metaPosted)
     (m^.metaModified)
     (Story <$> (h^.hdrStoryName) <*> (h^.hdrStoryIdx))
+    (h^.hdrIndex)
 
 data ProjectHeader = ProjectHeader
     { _hdrProjName :: Node

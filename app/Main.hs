@@ -75,13 +75,15 @@ main = hibachiBuild "/home/glr/Documents/Blog/posts" $ do
     -- Two more simple rules
     stylecss %> \out ->
         writeFileD out styleText
+    "out/css/code.css" %> \out ->
+        writeFileD out styleCode
 
     feedhtml %> \out ->
         writeFileD out feedTemplateTxt
 
     -- This rule tells Shake to generate the robots.txt, about.html and
     -- style.css files.
-    want [robotstxt, abouthtml, stylecss]
+    want [robotstxt, abouthtml, stylecss, "out/css/code.css"]
 
     -- Now we get to a little bit complexer rules.
     -- With posts we don't know which ones we want to generate outside of "all
@@ -99,7 +101,7 @@ main = hibachiBuild "/home/glr/Documents/Blog/posts" $ do
     -- Another rule, this time to write an index file re a tag index file. Index
     -- files are used for the main index, while tag indices are used for the tag
     -- indices (duh?)
-    writeIndex $ writeFileD indexhtml . renderIndex . L.reverse . L.sortOn (^._2.posted)
+    writeIndex $ writeFileD indexhtml . renderIndex . L.reverse . L.sortOn (^._2.posted) . L.filter (^._2.indexshow)
     writeTags (\t p -> writeFileD (tagsindex $ T.unpack t) $ renderTagIndex t $ L.reverse $ L.sortOn (^._2.posted) p)
     writeProjectIdx $ writeFileD projectsindex . renderProjects . L.reverse . L.sortOn (^.projIdx)
 

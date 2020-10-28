@@ -3,6 +3,7 @@ module Style where
 import           Prelude        hiding (not, rem, span, (**), display)
 
 import           Data.Text.Lazy (Text, toStrict)
+import           Data.Text (pack)
 
 import           Clay
 import qualified Clay.Flexbox   as Flexbox
@@ -14,8 +15,7 @@ import           Skylighting    (pygments, styleToCss)
 --styleText :: Text
 styleText = toStrict $ renderWith pretty [] ourStyle
 
-styleCode :: String
-styleCode = styleToCss pygments
+styleCode = pack $ styleToCss pygments
 
 ourStyle :: Css
 ourStyle = do
@@ -399,9 +399,10 @@ project = do
         marginBottom (px 20)
     ".project"#hover ? violetOutline
     -- Switch around every other listing (image on the right, text on the left)
-    -- This breaks the monotony and hides that pictures aren't all the same proportions
+    -- This breaks the monotony and hides somewhat that pictures aren't all the
+    -- same proportions
     ".project"#nthChild "2n+0" ? flexDirection rowReverse
-    
+
     ".project-image" ? do
         maxWidth (pct 100)
         minWidth (em 10)
