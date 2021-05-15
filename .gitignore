@@ -22,4 +22,7 @@ cabal.project.local~
 .HTF/
 .ghc.environment.*
 
+out/
+.shake/
+# We use hpack
 *.cabal
