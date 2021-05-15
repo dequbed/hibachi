@@ -24,29 +24,9 @@ import Development.Shake
 import Templates
 import Style
 
-import System.IO (print)
-
--- Paths
-baseDir :: FilePath
-baseDir = "out"
-robotstxt :: FilePath
-robotstxt = baseDir </> "robots.txt"
-abouthtml :: FilePath
-abouthtml = baseDir </> "about.html"
-stylecss :: FilePath
-stylecss = baseDir </> "css" </> "default.css"
-indexhtml :: FilePath
-indexhtml = baseDir </> "index.html"
-tagsindex :: String -> FilePath
-tagsindex t = baseDir </> "tags" </> t <.> "html"
-feedhtml :: FilePath
-feedhtml = baseDir </> "feed.html"
-basePostDir :: FilePath
-basePostDir = baseDir </> "p"
-
 main :: IO ()
 -- `hibachiBuild` is a utility wrapper that enables all the git rules below
-main = hibachiBuild "/home/glr/Documents/Blog/posts" $ do
+main = hibachiBuild $ do
     -- In the case of robots.txt we just want to copy a file from a known branch
     -- to the output
     robotstxt %> \out ->
@@ -90,6 +70,16 @@ main = hibachiBuild "/home/glr/Documents/Blog/posts" $ do
     genTagIndex "posts"
 
     writeTags (\t p -> writeFileD (tagsindex $ T.unpack t) $ renderTagIndex t $ L.reverse $ L.sortOn (^._2.posted) p)
+  where
+    -- Paths
+    baseDir = "out"
+    robotstxt = baseDir </> "robots.txt"
+    abouthtml = baseDir </> "about.html"
+    stylecss = baseDir </> "css" </> "default.css"
+    indexhtml = baseDir </> "index.html"
+    tagsindex t = baseDir </> "tags" </> t <.> "html"
+    feedhtml = baseDir </> "feed.html"
+    basePostDir = baseDir </> "p"
 
 -- | Write a file, creating the directory containing it if necessary
 writeFileD :: FilePath -> Text -> Action ()
