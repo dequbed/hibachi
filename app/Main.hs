@@ -17,6 +17,7 @@ import Data.H2O.Shake.Branch
 import Data.H2O.Shake.Index
 import Data.H2O.Shake.Tags
 import Data.H2O.Post
+import Data.H2O.Feed
 import Data.H2O.Types
 
 import Development.Shake
@@ -43,9 +44,11 @@ main = hibachiBuild $ do
 
     feedhtml %> \out ->
         writeFileD out feedTemplateTxt
+    feedxml %> \out ->
+        maybe (fail "Could not generate feed") (writeFileD out) $ renderFeed genFeed
 
     -- We need to tell shake to actually generate the above files.
-    want [robotstxt, abouthtml, stylecss]
+    want [robotstxt, abouthtml, stylecss, feedxml]
 
     -- This installs an user-defined rule. Shake will use the below code to save
     -- a post it has read from the git index.
@@ -79,6 +82,7 @@ main = hibachiBuild $ do
     indexhtml = baseDir </> "index.html"
     tagsindex t = baseDir </> "tags" </> t <.> "html"
     feedhtml = baseDir </> "feed.html"
+    feedxml = baseDir </> "feed.xml"
     basePostDir = baseDir </> "p"
 
 -- | Write a file, creating the directory containing it if necessary
