@@ -13,7 +13,7 @@ import Data.H2O.Shake.Post
 import Data.H2O.Shake.Index
 import Data.H2O.Shake.Tags
 
-data Flag = FlagPosts FilePath
+newtype Flag = FlagPosts FilePath
 
 flags = [Option "" ["posts"] (ReqArg (Right . FlagPosts) "DIR") "Posts Repository path"]
 
@@ -21,9 +21,7 @@ flags = [Option "" ["posts"] (ReqArg (Right . FlagPosts) "DIR") "Posts Repositor
 -- repository
 hibachiBuild :: Rules () -> IO ()
 hibachiBuild f = shakeArgsOptionsWith shakeOptions flags $ \opts flags targets -> do
-    pure $ Just $
-        ( setOpts opts flags
-        , do
+    pure $ Just ( setOpts opts flags , do
             addBranchHeadRule
             addMetaMapRule
             addPostBuildRule
@@ -35,7 +33,7 @@ hibachiBuild f = shakeArgsOptionsWith shakeOptions flags $ \opts flags targets -
         )
 
 setOpts :: ShakeOptions -> [Flag] -> ShakeOptions
-setOpts opts flags = foldr setOpt opts flags
+setOpts = foldr setOpt
 
 setOpt :: Flag -> ShakeOptions -> ShakeOptions
 setOpt (FlagPosts repo) opts = opts{shakeExtra = addShakeExtra (RepoPath repo) $ shakeExtra opts}

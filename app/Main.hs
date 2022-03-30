@@ -37,7 +37,7 @@ main = hibachiBuild $ do
     -- The about.html doesn't change much more often than the robots.txt but
     -- also needs a template applied
     abouthtml %> \out ->
-        writeFileD out =<< aboutTemplate <$> getVersionedFile "static" "about.md"
+        writeFileD out . aboutTemplate =<< getVersionedFile "static" "about.md"
 
     stylecss %> \out ->
         writeFileD out styleText
@@ -52,13 +52,13 @@ main = hibachiBuild $ do
 
     -- This installs an user-defined rule. Shake will use the below code to save
     -- a post it has read from the git index.
-    versioned 2 $ writePost (\p -> do
+    versioned 2 $ writePost $ \p -> do
         let filename = genFileN $ p^.title
             path = basePostDir </> filename <.> "html"
 
         writeFileD path $ renderPostText p
 
-        return $ pathToLink path)
+        return $ pathToLink path
 
     -- Generate an index from all files in the `posts` branch. This will use the
     -- above defined user rule to actually figure out where to point the entries

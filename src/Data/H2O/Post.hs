@@ -21,7 +21,10 @@ import Data.H2O.ReadTime (calculateReadTime)
 type Error = Text
 
 readPost' :: Meta -> Text -> Post
-readPost' m t = fromRight' $ readPost m t
+readPost' m t = fromRight' $ debug $ readPost m t
+    where debug :: Show a => Either a b -> Either a b
+          debug r@(Left e) = traceShow e r
+          debug l = l
 
 readPost :: Meta -> Text -> Either Error Post
 readPost meta t = do

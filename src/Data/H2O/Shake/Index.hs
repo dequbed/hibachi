@@ -52,10 +52,10 @@ data IndexR = IndexR
 instance NFData IndexR
 
 writeIndex :: ([(FilePath, Post)] -> Action ()) -> Rules ()
-writeIndex act = addUserRule $ IndexRule act
+writeIndex = addUserRule . IndexRule
 
 needIndex :: [(FilePath, Post)] -> Action IndexR
-needIndex posts = apply1 $ IndexQ posts
+needIndex = apply1 . IndexQ
 
 genBranchIndex :: Text -> Rules()
 genBranchIndex branch = action $ do

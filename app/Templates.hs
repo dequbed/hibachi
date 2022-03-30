@@ -71,7 +71,7 @@ htmlBody c = body_ $ let togglenav = "toggle-nav" in do
             a_ (navlink "/projects") $ li_ ( span_ (navicon "fas fa-terminal") "" <> "Projects" )
         div_ [class_ "spacer"] ""
         ul_ [id_ "navright"] $ do
-            a_ (navlink "/feed.html") $ li_ ( span_ (navicon "fas fa-rss") "" <> "RSS" )
+            a_ (navlink "/feed.xml") $ li_ ( span_ (navicon "fas fa-rss") "" <> "RSS" )
             a_ (navlink "https://github.com/dequbed") $ li_ ( span_ (navicon "fab fa-github") "" <> "Github" )
             a_ (navlink "https://mastodon.chaosfield.at/@dequbed") $ li_ ( span_ (navicon "fab fa-mastodon") "" <> "Mastodon" )
     main_ c
@@ -127,17 +127,17 @@ renderPost post = renderPost'
             htmlBody $
                 article_ [class_ "post"] $ do
                     postHeader title readtime
-                    renderNode [] $ apply dropHeadingLevel content
+                    renderNode [optUnsafe] $ apply hibachiFilters content
                     postFooter postedTime tags author
 
 renderAbout :: Node -> Html ()
 renderAbout about =
     htmlPre $ do
-        htmlHead (Just "Gregor 'dequbed' Reitzenstein") (Just "") ["Blog", "dequbed"]
+        htmlHead (Just "Nadja 'dequbed' Reitzenstein") (Just "") ["Blog", "dequbed"]
         htmlBody $
             div_ [class_ "post"]
                 $ renderNode []
-                $ apply dropHeadingLevel about
+                $ apply hibachiFilters about
 
 aboutTemplate :: Text -> Text
 aboutTemplate = renderHtmlT . renderAbout . readCM

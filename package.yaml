@@ -13,7 +13,7 @@ homepage:           https://dequbed.space/
 license:            GPL-3
 license-file:       LICENSE
 
-author:             Gregor Reitzenstein
+author:             Nadja Reitzenstein
 maintainer:         me@dequbed.space
 
 category:           Web
@@ -66,17 +66,18 @@ ghc-options:
   - -Wincomplete-uni-patterns
   - -Wpartial-fields
   - -Wredundant-constraints
+  - -dynamic
 
 
 library:
   source-dirs: src
   dependencies:
     - name: base
-      version: "^>=4.14.1.0"
+      #version: "^>=4.14.1.0"
       mixin: &base-mixin
         - hiding (Prelude)
     - name: rio
-      version: ">= 0.1  && <1"
+      #version: ">= 0.1  && <1"
       mixin: &rio-mixin
         - (RIO as RIO)
         - (RIO.List                     as Prelude.List)
@@ -128,27 +129,29 @@ library:
         - (RIO.Vector.Unboxed.Unsafe    as Prelude.Vector.Unboxed.Unsafe)
         - (RIO.Vector.Unsafe            as Prelude.Vector.Unsafe)
         - (RIO.Writer                   as Prelude.Writer)
-    - text            >= 1.2  && <2
-    - bytestring      >= 0.10 && <1
-    - lucid           >= 2.9  && <3
-    - cmark           >= 0.6  && <1
-    - cmark-lucid     >= 0.1  && <1
-    - clay            >= 0.13 && <1
-    - gitlib          >= 3.1  && <4
-    - gitlib-libgit2  >= 3.1  && <4
-    - lens            >= 4    && <5
-    - shake           >= 0.18 && <1
-    - time            >= 1.8  && <2
-    - binary          >= 0.8  && <1
-    - tagged          >= 0.8  && <1
+    - text            #>= 1.2  && <2
+    - bytestring      #>= 0.10 && <1
+    - lucid           #>= 2.9  && <3
+    - skylighting     #>= 0.8  && <1
+    - skylighting-lucid
+    - cmark           #>= 0.6  && <1
+    - cmark-lucid     #>= 0.1  && <1
+    - clay            #>= 0.13 && <1
+    - gitlib          >= 3.1.3
+    - gitlib-libgit2  >= 3.1.2
+    - lens            #>= 5    && <6
+    - shake           #>= 0.18 && <1
+    - time            #>= 1.8  && <2
+    - binary          #>= 0.8  && <1
+    - tagged          #>= 0.8  && <1
     - exceptions
-    - conduit         >= 1.3  && <2
-    - containers      >= 0.6  && <1
-    - yaml            >= 0.11 && <1
-    - either          >= 5.0  && <6
-    - split           >= 0.2  && <1
-    - feed            >= 1.3  && <2
-    - xml-conduit     >= 1.9
+    - conduit         #>= 1.3  && <2
+    - containers      #>= 0.6  && <1
+    - yaml            #>= 0.11 && <1
+    - either          #>= 5.0  && <6
+    - split           #>= 0.2  && <1
+    - feed            #>= 1.3  && <2
+    - xml-conduit
     - HUnit
 
 executables:
@@ -157,28 +160,28 @@ executables:
     source-dirs: app
     dependencies:
       - name: base
-        version: "^>=4.14.1.0"
+        #version: "^>=4.14.1.0"
         mixin: *base-mixin
       - name: rio
-        version: ">= 0.1  && <0.2"
+        #version: ">= 0.1  && <0.2"
         mixin: *rio-mixin
-      - bytestring           >= 0.10 && <1
-      - clay                 >= 0.13 && <1
-      - cryptonite           >= 0.26 && <1
-      - cmark                >= 0.6  && <1
-      - gitlib               >= 3.1  && <4
-      - conduit              >= 1.3  && <2
-      - cmark-lucid          >= 0.1  && <1
-      - containers           >= 0.6  && <1
-      - lens                 >= 4    && <5
-      - lucid                >= 2.9  && <3
-      - shake                >= 0.18 && <1
-      - skylighting          >= 0.8  && <1
-      - text                 >= 1.2  && <2
-      - time                 >= 1.8  && <2
-      - microlens            >= 0.4  && <1
-      - filepath             >= 1.4  && <2
-      - optparse-applicative >= 0.16 && <1
+      - bytestring           #>= 0.10 && <1
+      - clay                 #>= 0.13 && <1
+      - cryptonite           #>= 0.26 && <1
+      - cmark                #>= 0.6  && <1
+      - gitlib
+      - conduit              #>= 1.3  && <2
+      - cmark-lucid          #>= 0.1  && <1
+      - containers           #>= 0.6  && <1
+      - lens                 #>= 5    && <6
+      - lucid                #>= 2.9  && <3
+      - shake                #>= 0.18 && <1
+      - skylighting          #>= 0.8  && <1
+      - text                 #>= 1.2  && <2
+      - time                 #>= 1.8  && <2
+      - microlens            #>= 0.4  && <1
+      - filepath             #>= 1.4  && <2
+      - optparse-applicative #>= 0.16 && <1
       - Hibachi
 
 tests:
@@ -187,7 +190,7 @@ tests:
     source-dirs: test
     dependencies:
       - name: base
-        version: "^>=4.14.1.0"
+        #version: "^>=4.14.1.0"
       - Hibachi
 
 # vim: nospell
