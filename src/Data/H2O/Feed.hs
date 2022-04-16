@@ -16,11 +16,24 @@ import qualified Text.Feed.Export as Export (textFeedWith)
 
 import Data.H2O.Types
 
-genFeed :: Atom.Feed
-genFeed = Atom.nullFeed
-    "http://dequbed.space/feed.xml"
-    (Atom.TextString "Dequbeds Blog")
-    "2021-05-15"
+genFeed :: [Atom.Entry] -> Atom.Feed
+genFeed entries = Atom.Feed
+    { Atom.feedId = "http://dequbed.space/feed.xml"
+    , Atom.feedTitle = Atom.TextString "Dequbeds Blog"
+    , Atom.feedUpdated = "2021-05-15"
+    , Atom.feedAuthors = []
+    , Atom.feedCategories = []
+    , Atom.feedContributors = []
+    , Atom.feedGenerator = Nothing
+    , Atom.feedIcon = Nothing
+    , Atom.feedLinks = []
+    , Atom.feedLogo = Nothing
+    , Atom.feedRights = Nothing
+    , Atom.feedSubtitle = Nothing
+    , Atom.feedEntries = entries
+    , Atom.feedAttrs = []
+    , Atom.feedOther = []
+    }
 
 renderFeed :: Atom.Feed -> Maybe Text
 renderFeed = fmap toStrict . Export.textFeedWith def{rsPretty = True} . AtomFeed

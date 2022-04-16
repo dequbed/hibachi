@@ -30,8 +30,8 @@ meta "" _ = return ()
 meta _ "" = return ()
 meta key value = meta_ [name_ key, content_ value]
 
-whenMaybe :: Applicative f => (a -> f ()) -> Maybe a -> f ()
-whenMaybe = maybe (pure ())
+whenJust :: Applicative f => (a -> f ()) -> Maybe a -> f ()
+whenJust = maybe (pure ())
 
 -- Write a HTML head tag with some common stuff and additional HTML
 htmlHeadM :: Html () -> Html ()
@@ -54,8 +54,8 @@ htmlHeadM rest = head_ $ do
 htmlHead :: Maybe Text -> Maybe Text -> [Text] -> Html ()
 htmlHead author desc keywords = htmlHeadM $ do
     -- Any of those may be Nothing so only set a meta if it is a Just
-    whenMaybe (meta "author") author
-    whenMaybe (meta "description") desc
+    whenJust (meta "author") author
+    whenJust (meta "description") desc
     -- Unset keywords are an empty list which will return an empty string and thus not do anything
     meta "keywords" $ intercalate "," keywords
 
@@ -71,7 +71,7 @@ htmlBody c = body_ $ let togglenav = "toggle-nav" in do
             a_ (navlink "/projects") $ li_ ( span_ (navicon "fas fa-terminal") "" <> "Projects" )
         div_ [class_ "spacer"] ""
         ul_ [id_ "navright"] $ do
-            a_ (navlink "/feed.xml") $ li_ ( span_ (navicon "fas fa-rss") "" <> "RSS" )
+            a_ (navlink "/feed.html") $ li_ ( span_ (navicon "fas fa-rss") "" <> "RSS" )
             a_ (navlink "https://github.com/dequbed") $ li_ ( span_ (navicon "fab fa-github") "" <> "Github" )
             a_ (navlink "https://mastodon.chaosfield.at/@dequbed") $ li_ ( span_ (navicon "fab fa-mastodon") "" <> "Mastodon" )
     main_ c
@@ -99,7 +99,7 @@ indexTemplate = listView (return ())
 
 -- Tempalate for the tags view
 tagsTemplate :: Text -> [(FilePath, Post)] -> Html ()
-tagsTemplate tag = listView (p_ [] $ toHtmlRaw $ tag)
+tagsTemplate = listView . p_ [] . toHtmlRaw
 
 renderPostlink :: FilePath -> Post -> Html ()
 renderPostlink path post =

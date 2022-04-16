@@ -4,7 +4,7 @@ import Prelude.FilePath
 import Prelude.Directory
 import Prelude.Text as T
 import qualified Prelude.List as L
-import Data.ByteString.Char8 as BL
+import Data.ByteString.Char8 as BL hiding (writeFile)
 
 import Lens.Micro
 
@@ -24,77 +24,85 @@ import Development.Shake
 
 import Templates
 import Style
+import Path (writeFile)
 
+-- Shake creates a declarative programming DSL for a "build system" of sorts; specific thing are
+-- done based on rules that are matched based on patterns. Things to be done usually means files
+-- being written, but intermediary artifacts are saved.
+-- In our case we have created several rules for writing both the actual post HTML file and an index
+-- of all generated post files. Both of these depend on those posts being read from git as
+-- CommonMark, and share the parsed files as artifacts between each other.
+-- Shake transforms the `Rules ()` into actual artifacts by sharing access to intermediary artifacts
 main :: IO ()
 -- `hibachiBuild` is a utility wrapper that enables all the git rules below
 main = hibachiBuild $ do
     -- In the case of robots.txt we just want to copy a file from a known branch
     -- to the output
-    robotstxt %> \out ->
+    "robots.txt" %> \out -> do
         -- getVersionedFile returns the latest blob with a given path in the
         -- given branch
-        writeFileD out =<< getVersionedFile "static" "robots.txt"
+        file_content <- getVersionedFile "static" "robots.txt"
+        writeFile out file_content
+
     -- The about.html doesn't change much more often than the robots.txt but
     -- also needs a template applied
-    abouthtml %> \out ->
-        writeFileD out . aboutTemplate =<< getVersionedFile "static" "about.md"
+    "about.html" %> \out -> do
+        file_content <- getVersionedFile "static" "about.md"
+        writeFile out (aboutTemplate file_content)
 
-    stylecss %> \out ->
-        writeFileD out styleText
+    -- CSS files are generated from code and available independent of the git backend
+    "style.css" %> \out -> writeFile out styleText
+    "code.css" %> \out -> writeFile out styleCode
 
-    feedhtml %> \out ->
-        writeFileD out feedTemplateTxt
-    feedxml %> \out ->
-        maybe (fail "Could not generate feed") (writeFileD out) $ renderFeed genFeed
+    "feed.html" %> \out ->
+        writeFile out feedTemplateTxt
+
+    "feed.xml" %> \out -> do
+        posts <- needBranchPosts "posts"
+        let sorted_posts = L.reverse $ L.sortOn (^._2.posted) posts
+            entries = L.map (\(path,post) -> toEntry (T.pack path) post) sorted_posts
+        maybe (fail "Could not generate feed") (writeFile out) $ renderFeed $ genFeed entries
+
+    "index.html" %> \out -> do
+        posts <- needBranchPosts "posts"
+        writeFile out $ renderIndex $ L.reverse $ L.sortOn (^._2.posted) posts
 
     -- We need to tell shake to actually generate the above files.
-    want [robotstxt, abouthtml, stylecss, feedxml]
+    want ["robots.txt", "about.html", "style.css", "code.css", "feed.html", "feed.xml"]
 
     -- This installs an user-defined rule. Shake will use the below code to save
     -- a post it has read from the git index.
-    versioned 2 $ writePost $ \p -> do
+    -- The function provided must return the path the post was saved to so links can be inserted in
+    -- other pages trying to link to this post.
+    writePost $ \p -> do
         let filename = genFileN $ p^.title
-            path = basePostDir </> filename <.> "html"
+            path = "p" </> filename <.> "html"
 
-        writeFileD path $ renderPostText p
+        writeFile path $ renderPostText p
 
         return $ pathToLink path
+
+    -- Another user-defined rule. This time to write an index file. Index files
+    -- are used for the main index, tag indices and similar.
+    --writeIndex $ writeFile "index.html" . renderIndex . L.reverse . L.sortOn (^._2.posted)
+
+    writeTags $ \tagname posts -> do 
+        let out = "tags" </> T.unpack tagname <.> "html"
+            sorted_posts = L.reverse $ L.sortOn (^._2.posted) posts
+        writeFile out $ renderTagIndex tagname sorted_posts
 
     -- Generate an index from all files in the `posts` branch. This will use the
     -- above defined user rule to actually figure out where to point the entries
     -- in the index.
-    genBranchIndex "posts"
-
-    -- Another user-defined rule. This time to write an index file. Index files
-    -- are used for the main index, tag indices and similar.
-    writeIndex $ writeFileD indexhtml . renderIndex . L.reverse . L.sortOn (^._2.posted)
+    --wantBranchIndex "posts"
 
     -- Generate tag indices 
-    genTagIndex "posts"
-
-    writeTags (\t p -> writeFileD (tagsindex $ T.unpack t) $ renderTagIndex t $ L.reverse $ L.sortOn (^._2.posted) p)
-  where
-    -- Paths
-    baseDir = "out"
-    robotstxt = baseDir </> "robots.txt"
-    abouthtml = baseDir </> "about.html"
-    stylecss = baseDir </> "css" </> "default.css"
-    indexhtml = baseDir </> "index.html"
-    tagsindex t = baseDir </> "tags" </> t <.> "html"
-    feedhtml = baseDir </> "feed.html"
-    feedxml = baseDir </> "feed.xml"
-    basePostDir = baseDir </> "p"
-
--- | Write a file, creating the directory containing it if necessary
-writeFileD :: FilePath -> Text -> Action ()
-writeFileD file content = do
-    createDirectoryIfMissing True (takeDirectory file)
-    writeFileUtf8 file content
+    wantTagIndex "posts"
 
 genFileN :: Show a => a -> String
-genFileN = Prelude.take 10 . show . run . BL.pack . show
-    where run :: BL.ByteString -> Digest Whirlpool
-          run = hash
+genFileN = Prelude.take 10 . show . hash' . BL.pack . show
+    where hash' :: BL.ByteString -> Digest Whirlpool
+          hash' = hash
 
 pathToLink :: FilePath -> FilePath
 pathToLink = joinPath . L.drop 1 . splitPath . dropExtension

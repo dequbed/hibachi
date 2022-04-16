@@ -13,9 +13,13 @@ import Data.H2O.Shake.Post
 import Data.H2O.Shake.Index
 import Data.H2O.Shake.Tags
 
-newtype Flag = FlagPosts FilePath
+data Flag = FlagPosts FilePath
+          | FlagOutprefix FilePath
 
-flags = [Option "" ["posts"] (ReqArg (Right . FlagPosts) "DIR") "Posts Repository path"]
+
+flags = [ Option "" ["posts"] (ReqArg (Right . FlagPosts) "DIR") "Posts Repository path"
+        , Option "o" ["out"] (ReqArg (Right . FlagOutprefix) "DIR") "Output directory"
+        ]
 
 -- | Setup function that needs to be called before being able to do any other Actions requiring a
 -- repository
@@ -37,3 +41,4 @@ setOpts = foldr setOpt
 
 setOpt :: Flag -> ShakeOptions -> ShakeOptions
 setOpt (FlagPosts repo) opts = opts{shakeExtra = addShakeExtra (RepoPath repo) $ shakeExtra opts}
+setOpt (FlagOutprefix prefix) opts = opts{shakeExtra = addShakeExtra (OutPrefix prefix) $ shakeExtra opts}

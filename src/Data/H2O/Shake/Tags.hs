@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 module Data.H2O.Shake.Tags
     ( writeTags
-    , genTagIndex
+    , wantTagIndex
     , addTagBuildRule
     ) where
 
@@ -57,8 +57,8 @@ writeTags act = addUserRule $ TagsRule act
 needTags :: [(FilePath, Post)] -> Text -> Action TagsR
 needTags posts tag = apply1 $ TagsQ posts tag
 
-genTagIndex :: Text -> Rules ()
-genTagIndex branch = action $ do
+wantTagIndex :: Text -> Rules ()
+wantTagIndex branch = action $ do
     tree <- branchTree branch
     repo <- getRepo
     b <- liftIO $ withRepository lgFactory repo $

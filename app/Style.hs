@@ -2,7 +2,9 @@ module Style where
 
 import           Prelude        hiding (not, rem, span, (**), display)
 
-import           Data.Text.Lazy (Text, toStrict)
+import           Data.Text      (pack)
+import           Data.Text.Lazy (toStrict)
+import qualified Data.Text.Lazy as TL
 
 import           Clay
 import qualified Clay.Flexbox   as Flexbox
@@ -11,11 +13,11 @@ import qualified Clay.Media     as Media
 
 import           Skylighting    (pygments, styleToCss)
 
---styleText :: Text
+styleText :: Text
 styleText = toStrict $ renderWith pretty [] ourStyle
 
-styleCode :: String
-styleCode = styleToCss pygments
+styleCode :: Text
+styleCode = pack $ styleToCss pygments
 
 ourStyle :: Css
 ourStyle = do
@@ -237,28 +239,28 @@ navbar = do
         "transform" -: "translateX(100%)"
     query Media.screen [Media.minWidth (rem 49)] $
         ".toggle-nav:checked ~ nav" ?
-            (transform $ translateX nil) :: Css
+            transform (translateX nil) :: Css
 
     ".toggle-nav:checked ~ main" ? do
         "will-change" -: "transform"
         "transform" -: "translateX(70%)"
     query Media.screen [Media.minWidth (rem 49)] $
         ".toggle-nav:checked ~ nav" ?
-            (transform $ translateX nil) :: Css
+            transform (translateX nil) :: Css
 
     ".toggle-nav:checked ~ #footer" ? do
         "will-change" -: "transform"
         "transform" -: "translateX(70%)"
     query Media.screen [Media.minWidth (rem 49)] $
         ".toggle-nav:checked ~ #footer" ? do
-            (transform $ translateX nil) :: Css
+            transform (translateX nil) :: Css
 
     ".toggle-nav"#checked |+ ".mobile-bar" ? do
         "will-change" -: "transform"
         "transform" -: "translateX(70%)"
     query Media.screen [Media.minWidth (rem 49)] $
         ".toggle-nav"#checked |+ ".mobile-bar" ?
-            (transform $ rotate (deg 180)) :: Css
+            transform (rotate (deg 180)) :: Css
 
 mainElement :: Css
 mainElement = do
@@ -352,7 +354,7 @@ links = do
         borderBottom solid (px 1) none
     a#active ?
         color "#410a4c"
-    a#("href"*="http")#before#(not ".navlink") ? do
+    a # ("href"*="http") # before # not ".navlink" ? do
         content $ stringContent "\61582"
         paddingLeft (em 0.4)
         fontSize (em 0.6)

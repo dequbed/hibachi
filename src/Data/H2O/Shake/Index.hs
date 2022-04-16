@@ -2,7 +2,8 @@ module Data.H2O.Shake.Index
     ( writeIndex
     , needIndex
     , addIndexBuildRule
-    , genBranchIndex
+    , needBranchPosts
+    , wantBranchIndex
     ) where
 
 import qualified Prelude.ByteString.Lazy as BL
@@ -57,8 +58,8 @@ writeIndex = addUserRule . IndexRule
 needIndex :: [(FilePath, Post)] -> Action IndexR
 needIndex = apply1 . IndexQ
 
-genBranchIndex :: Text -> Rules()
-genBranchIndex branch = action $ do
+needBranchPosts :: Text -> Action [(FilePath, Post)]
+needBranchPosts branch = do
     tree <- branchTree branch
     repo <- getRepo
     b <- liftIO $ withRepository lgFactory repo $
@@ -69,7 +70,10 @@ genBranchIndex branch = action $ do
             .| C.sinkList
     p <- needPosts branch $ map fst b
     paths <- writePosts p
-    needIndex $ zip paths p
+    return $ zip paths p
+
+wantBranchIndex :: Text -> Rules()
+wantBranchIndex branch = action $ needBranchPosts branch >>= needIndex
 
 
 addIndexBuildRule :: Rules ()
