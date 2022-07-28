@@ -336,7 +336,7 @@ footerElement = do
         padding (px 10) (px 10) (px 10) (px 10)
         fontSize (rem 0.6)
         color "#abab9e"
-        borderTop solid (px 2) white
+        borderTop (px 2) solid white
         transition "transform" (ms 300) ease none
     "#footer" ** span ? do
         alignSelf center
@@ -351,7 +351,7 @@ links = do
         textDecoration none
         color "#8e16a6"
     a#focus <> a#hover ?
-        borderBottom solid (px 1) none
+        borderBottom (px 1) solid none
     a#active ?
         color "#410a4c"
     a # ("href"*="http") # before # not ".navlink" ? do
@@ -386,7 +386,7 @@ pagination =
         a ? do
             float floatLeft
             textDecoration none
-            border solid (px 1) black
+            border (px 1) solid black
             margin nil nil nil nil
 
 logo :: Css
