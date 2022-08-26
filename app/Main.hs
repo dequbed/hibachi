@@ -51,8 +51,8 @@ main = hibachiBuild $ do
         writeFile out (aboutTemplate file_content)
 
     -- CSS files are generated from code and available independent of the git backend
-    "style.css" %> \out -> writeFile out styleText
-    "code.css" %> \out -> writeFile out styleCode
+    "css/default.css" %> \out -> writeFile out styleText
+    "css/code.css" %> \out -> writeFile out styleCode
 
     "feed.html" %> \out ->
         writeFile out feedTemplateTxt
@@ -68,7 +68,7 @@ main = hibachiBuild $ do
         writeFile out $ renderIndex $ L.reverse $ L.sortOn (^._2.posted) posts
 
     -- We need to tell shake to actually generate the above files.
-    want ["robots.txt", "about.html", "style.css", "code.css", "feed.html", "feed.xml"]
+    want ["robots.txt", "about.html", "css/default.css", "css/code.css", "feed.html", "feed.xml", "index.html"]
 
     -- This installs an user-defined rule. Shake will use the below code to save
     -- a post it has read from the git index.

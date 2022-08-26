@@ -104,10 +104,10 @@ tagsTemplate = listView . p_ [] . toHtmlRaw
 renderPostlink :: FilePath -> Post -> Html ()
 renderPostlink path post =
     article_ [class_ "post"] $ do
-        postHeaderF (a_ [href_ (pathToLink path)] $ toHtmlRaw $ nodeToHtml [] $ apply parToH1 $ post^.title) (post^.title) (post^.readtime) 
+        postHeaderF (a_ [href_ (pathToLink $ "p" </> path)] $ toHtmlRaw $ nodeToHtml [] $ apply parToH1 $ post^.title) (post^.title) (post^.readtime) 
         div_ [class_ "abstract"] $ do
             renderNode [] (post^.abstract)
-            a_ [href_ (pathToLink path)] "More…"
+            a_ [href_ (pathToLink $ "p" </> path)] "More…"
         postFooter (post^.posted) (post^.tags) (post^.author)
 
 renderPost :: Post -> Html ()
