@@ -1,7 +1,6 @@
 module Main (main) where
 
 import Prelude.FilePath
-import Prelude.Directory
 import Prelude.Text as T
 import qualified Prelude.List as L
 import Data.ByteString.Char8 as BL hiding (writeFile)
@@ -10,13 +9,11 @@ import Lens.Micro
 
 import Crypto.Hash
 
-import Data.H2O.Shake
-import Data.H2O.Shake.Init
-import Data.H2O.Shake.Post
+import Data.H2O.Shake.Init (hibachiBuild)
+import Data.H2O.Shake.Post (writePost)
 import Data.H2O.Shake.Branch
 import Data.H2O.Shake.Index
 import Data.H2O.Shake.Tags
-import Data.H2O.Post
 import Data.H2O.Feed
 import Data.H2O.Types
 

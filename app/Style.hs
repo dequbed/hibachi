@@ -1,4 +1,7 @@
-module Style where
+module Style
+    ( styleText
+    , styleCode
+    ) where
 
 import           Prelude        hiding (not, rem, span, (**), display)
 

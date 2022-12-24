@@ -73,7 +73,7 @@ htmlBody c = body_ $ let togglenav = "toggle-nav" in do
         ul_ [id_ "navright"] $ do
             a_ (navlink "/feed.html") $ li_ ( span_ (navicon "fas fa-rss") "" <> "RSS" )
             a_ (navlink "https://github.com/dequbed") $ li_ ( span_ (navicon "fab fa-github") "" <> "Github" )
-            a_ (navlink "https://mastodon.chaosfield.at/@dequbed") $ li_ ( span_ (navicon "fab fa-mastodon") "" <> "Mastodon" )
+            a_ [rel_ "me", class_ "navlink", href_ "https://mastodon.chaosfield.at/@dequbed"] $ li_ $ span_ (navicon "fab fa-mastodon") $ "" <> "Mastodon"
     main_ c
     footer_ [id_ "footer"] $ span_ [class_ "license"] $ do {
         "Unless otherwise noted all content is licensed under a";
