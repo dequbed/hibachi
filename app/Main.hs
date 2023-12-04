@@ -3,6 +3,7 @@ module Main (main) where
 import Prelude.FilePath
 import Prelude.Text as T
 import qualified Prelude.List as L
+import qualified Prelude.ByteString as B
 import Data.ByteString.Char8 as BL hiding (writeFile)
 
 import Lens.Micro
@@ -14,6 +15,7 @@ import Data.H2O.Shake.Post (writePost)
 import Data.H2O.Shake.Branch
 import Data.H2O.Shake.Index
 import Data.H2O.Shake.Tags
+import Data.H2O.Shake.LFS (getGitLfsBlob)
 import Data.H2O.Feed
 import Data.H2O.Types
 
@@ -64,6 +66,9 @@ main = hibachiBuild $ do
         posts <- needBranchPosts "posts"
         writeFile out $ renderIndex $ L.reverse $ L.sortOn (^._2.posted) posts
 
+    "a.png" %> \out -> do
+        B.writeFile out =<< getGitLfsBlob "posts" "a.png"
+
     -- We need to tell shake to actually generate the above files.
     want ["robots.txt", "about.html", "css/default.css", "css/code.css", "feed.html", "feed.xml", "index.html"]
 
@@ -91,7 +96,7 @@ main = hibachiBuild $ do
     -- Generate an index from all files in the `posts` branch. This will use the
     -- above defined user rule to actually figure out where to point the entries
     -- in the index.
-    --wantBranchIndex "posts"
+    wantBranchIndex "posts"
 
     -- Generate tag indices 
     wantTagIndex "posts"
