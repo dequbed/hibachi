@@ -14,6 +14,9 @@ import Development.Shake.Classes
 
 import Data.Conduit
 import qualified Data.Conduit.Combinators as C
+import Data.Bifunctor (first)
+
+import Data.ByteString.UTF8 (toString)
 
 import Data.Binary.Put
 import Data.Binary.Get
@@ -67,6 +70,7 @@ needBranchPosts branch = do
             .| C.filter (\case
                 (_, BlobEntry _ _) -> True
                 _ -> False)
+            .| C.map (first toString)
             .| C.sinkList
     p <- needPosts branch $ map fst b
     paths <- writePosts p

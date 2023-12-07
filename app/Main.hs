@@ -56,6 +56,8 @@ main = hibachiBuild $ do
     "feed.html" %> \out ->
         writeFile out feedTemplateTxt
 
+    -- Everything below are generated rules running depending on posts in the index
+
     "feed.xml" %> \out -> do
         posts <- needBranchPosts "posts"
         let sorted_posts = L.reverse $ L.sortOn (^._2.posted) posts
@@ -66,11 +68,13 @@ main = hibachiBuild $ do
         posts <- needBranchPosts "posts"
         writeFile out $ renderIndex $ L.reverse $ L.sortOn (^._2.posted) posts
 
-    "a.png" %> \out -> do
-        B.writeFile out =<< getGitLfsBlob "posts" "a.png"
+    "*.png" %> \out -> do
+        B.writeFile out =<< getGitLfsBlob "images" out
 
     -- We need to tell shake to actually generate the above files.
     want ["robots.txt", "about.html", "css/default.css", "css/code.css", "feed.html", "feed.xml", "index.html"]
+
+    want ["bird_birb_borb.png"]
 
     -- This installs an user-defined rule. Shake will use the below code to save
     -- a post it has read from the git index.
@@ -86,7 +90,7 @@ main = hibachiBuild $ do
 
     -- Another user-defined rule. This time to write an index file. Index files
     -- are used for the main index, tag indices and similar.
-    --writeIndex $ writeFile "index.html" . renderIndex . L.reverse . L.sortOn (^._2.posted)
+    writeIndex $ writeFile "index.html" . renderIndex . L.reverse . L.sortOn (^._2.posted)
 
     writeTags $ \tagname posts -> do 
         let out = "tags" </> T.unpack tagname <.> "html"

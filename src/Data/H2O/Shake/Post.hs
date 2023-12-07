@@ -7,6 +7,7 @@ module Data.H2O.Shake.Post
     , defaultReadPost
     , wantPosts
     , wantPostsBranch
+    , needPost
     , needPosts
     , writePosts
     ) where
@@ -16,6 +17,7 @@ import qualified Prelude.Map as Map
 import qualified Prelude.Map.Partial as Map
 import qualified Prelude.ByteString as B
 import qualified Prelude.ByteString.Lazy as BL
+import qualified Prelude.Text as T
 
 import System.IO (print, putStrLn)
 
@@ -27,7 +29,9 @@ import Development.Shake.Classes
 
 import Data.Conduit
 import qualified Data.Conduit.Combinators as C
+import Data.Bifunctor (first)
 
+import Data.ByteString.UTF8 (toString)
 import Data.Binary.Put
 import Data.Binary.Get
 
@@ -112,16 +116,25 @@ addPostBuildRule = addBuiltinRule noLint noIdentity run
 -- resolution). ReadPost that takes a TreeFilePath and generates a Post from that (so that users can
 -- use TeX or Markdown or RST instead of commonmark).
 
-newtype ReadPostRule = ReadPostRule (Meta -> Text -> Action Post)
+-- ReadPostRule maps a FilePattern to an action that creates a post from a 
+-- given `Meta` and `Text` parsed from the file
+data ReadPostRule = ReadPostRule FilePattern (Meta -> Text -> Action Post)
     deriving Typeable
 
-type instance RuleResult ReadPostQ = ReadPostR
+-- Given a `ReadPostQ` a `ReadPostRule` will produce a `Post`
+type instance RuleResult ReadPostQ = Post
 
-data ReadPostQ = ReadPostQ { branch :: Text, readPath :: TreeFilePath }
+-- Which data 'need' requires. In this case, the branch and path to generate a
+-- post from.
+data ReadPostQ = ReadPostQ { branch :: Text, readPath :: FilePath }
     deriving (Typeable, Show, Eq, Generic, Hashable, Binary, NFData)
 
-data ReadPostA = ReadPostA { readVersion :: Int, generatedCommit :: SHA, readPost :: Post }
-    deriving (Generic)
+-- The data stored in shake's Database, used to correctly regenerate posts.
+data ReadPostA = ReadPostA 
+    { readVersion :: Int -- rule version so rule changes regenerate all files
+    , generatedCommit :: SHA
+    , readPost :: Post -- The post so it can be returned as-is if nothing changed
+    } deriving (Generic)
 
 instance Binary ReadPostA where
     put (ReadPostA ver gen post) = do
@@ -134,19 +147,18 @@ instance Binary ReadPostA where
         gen <- SHA <$> getByteString 20
         ReadPostA ver gen <$> get
 
-newtype ReadPostR = ReadPostR Post
-    deriving (Typeable, Show, Generic, NFData)
+readPostr :: FilePattern -> (Meta -> Text -> Action Post) -> Rules()
+readPostr p act = addUserRule (ReadPostRule p act)
 
-readPostr :: (Meta -> Text -> Action Post) -> Rules()
-readPostr act = addUserRule $ ReadPostRule act
+needPost :: Text -> FilePath -> Action Post
+needPost b p = apply1 (ReadPostQ b p)
 
-needPosts :: Text -> [TreeFilePath] -> Action [Post]
+needPosts :: Text -> [FilePath] -> Action [Post]
 needPosts branch paths = do
     let queries = map (ReadPostQ branch) paths
-    r <- apply queries
-    return $ map (\(ReadPostR p) -> p) r
+    apply queries
 
-wantPosts :: Text -> [TreeFilePath] -> Rules ()
+wantPosts :: Text -> [FilePath] -> Rules ()
 wantPosts branch paths = action $ do
     p <- needPosts branch paths
     writePosts p
@@ -161,6 +173,7 @@ wantPostsBranch branch = action $ do
             .| C.filter (\case
                 (_, BlobEntry _ _) -> True
                 _ -> False)
+            .| C.map (first toString)
             .| C.sinkList
     p <- needPosts branch $ map fst b
     writePosts p
@@ -169,13 +182,15 @@ wantPostsBranch branch = action $ do
 addPostReadRule :: Rules ()
 addPostReadRule = addBuiltinRule noLint noIdentity run
   where
-    run :: BuiltinRun ReadPostQ ReadPostR
+    run :: BuiltinRun ReadPostQ Post
     run key oldBin mode = do
         let old = fmap (runGet get . BL.fromStrict) oldBin
             disp _ = Just "This is another test string from PostReadRule."
-            test (ReadPostRule b) = Just b -- Later on filter based on ... something?
-            -- I'd like to be able to actually use different kinds of text format (RST, MD, CM, TeX)
-            -- but that would mean a major rewrite of the `Post` datastructure.
+            test (ReadPostRule p act) = if p ?== readPath key then
+                                            Just act
+                                        else
+                                            Nothing
+
         (ver, act) <- getUserRuleOne key disp test
 
         -- Rebuild checks if the last generated commit is the most up to date one
@@ -183,16 +198,14 @@ addPostReadRule = addBuiltinRule noLint noIdentity run
         let oid = (getOid . untag . commitOid) c
         s <- liftIO $ withForeignPtr oid oidToSha
         if mode == RunDependenciesSame && Just ver == (readVersion <$> old) && Just s == (generatedCommit <$> old) then
-            return $ RunResult ChangedNothing (fromJust oldBin) $ ReadPostR (readPost $ fromJust old)
+            return $ RunResult ChangedNothing (fromJust oldBin) (readPost $ fromJust old)
         else do
-            let path = readPath key
+            let path = encodeUtf8 $ T.pack $ readPath key
             metamap <- metaMap s
             let m = metamap Map.! path
             t <- getVersionedFile' (branch key) path
             post <- act m t
             let new = BL.toStrict $ runPut $ put $ ReadPostA ver s post
-            return $ RunResult ChangedRecomputeDiff new $ ReadPostR post
+            return $ RunResult ChangedRecomputeDiff new post
 
-defaultReadPost = priority 0 $ readPostr (\t m ->
-    return $ readPost' t m
-    )
+defaultReadPost = priority 0 $ readPostr "//*.md" readPost'

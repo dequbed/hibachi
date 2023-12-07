@@ -13,9 +13,13 @@ import Data.H2O.Types
 import Data.H2O.Shake
 import Data.H2O.Shake.Post
 import Data.H2O.Shake.Branch
+import Data.H2O.Shake.Index (needBranchPosts)
 
 import Data.Conduit
 import qualified Data.Conduit.Combinators as C
+import Data.Bifunctor (first)
+
+import Data.ByteString.UTF8 (toString)
 
 import Data.Binary.Put
 import Data.Binary.Get
@@ -59,18 +63,8 @@ needTags posts tag = apply1 $ TagsQ posts tag
 
 wantTagIndex :: Text -> Rules ()
 wantTagIndex branch = action $ do
-    tree <- branchTree branch
-    repo <- getRepo
-    b <- liftIO $ withRepository lgFactory repo $
-        runConduit $ sourceTreeEntries tree 
-            .| C.filter (\case
-                (_, BlobEntry _ _) -> True
-                _ -> False)
-            .| C.sinkList
-    posts <- needPosts branch $ map fst b
-    paths <- writePosts posts
-
-    let m = toMap $ zip paths posts
+    l <- needBranchPosts branch
+    let m = toMap l
     mapM_ needT $ Map.toList m
   where
     toMap :: [(FilePath, Post)] -> Map Text [(FilePath, Post)]

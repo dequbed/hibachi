@@ -10,6 +10,8 @@ import Data.Yaml
 
 import Data.Either.Combinators (fromRight')
 
+import Development.Shake (Action)
+
 import Data.Text (Text, lines, unlines, pack)
 import Data.Text.Encoding (encodeUtf8)
 
@@ -20,8 +22,8 @@ import Data.H2O.ReadTime (calculateReadTime)
 
 type Error = Text
 
-readPost' :: Meta -> Text -> Post
-readPost' m t = fromRight' $ debug $ readPost m t
+readPost' :: Meta -> Text -> Action Post
+readPost' m t = return $ fromRight' $ debug $ readPost m t
     where debug :: Show a => Either a b -> Either a b
           debug r@(Left e) = traceShow e r
           debug l = l
