@@ -9,6 +9,7 @@ import Prelude.Directory
 import Development.Shake
 
 import Data.H2O.Shake (getOutPrefix)
+import Data.H2O.Shake.Utils (writeFileText)
 
 data H2OPath 
   = GitPath Text
@@ -20,6 +21,4 @@ toFilePath (HtmlPath t) = unpack t
 
 -- Write a file, taking an prefix from ShakeExtra (usually "out")
 writeFile :: FilePath -> Text -> Action ()
-writeFile path content = do
-    createDirectoryIfMissing True (takeDirectory path)
-    writeFileUtf8 path content
+writeFile = writeFileText

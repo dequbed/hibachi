@@ -5,6 +5,7 @@ module Data.H2O.Templates
 
     , apply
     , hibachiFilters
+    , hibachiFilters'
 
     , readCM
     , renderHtmlT
@@ -14,12 +15,19 @@ module Data.H2O.Templates
 import Data.Text.Lazy (toStrict)
 import Data.Text (Text, pack)
 
+--import Control.Lens
+--import Control.Lens.Setter
+--
+import Data.H2O.Types (Post, content)
+import Data.H2O.Filters (filterLfs)
 
 import CMark
 import CMark.Lucid
 import Lucid
 import Skylighting hiding (formatHtmlBlock)
 import Skylighting.Format.HTML.Lucid (formatHtmlBlock)
+
+import Development.Shake (Action)
 
 apply :: (Node -> Node) -> Node -> Node
 apply f n = let (Node p t ns) = f n in
@@ -44,8 +52,15 @@ hilightCode n@(Node p (CODE_BLOCK info code) _) = case h2oTokenize info code of
       Right lines -> (\t -> Node p (HTML_BLOCK t) []) $ toStrict $ renderText $ formatHtmlBlock defaultFormatOpts lines
 hilightCode n = n
 
-hibachiFilters :: Node -> Node
-hibachiFilters = hilightCode . wrap dropHeadingLevel
+hibachiFilters :: Node -> Action Node
+hibachiFilters node = do
+    node <- filterLfs node
+    return $ apply (hilightCode . wrap dropHeadingLevel) node
+
+hibachiFilters' :: Post -> Action Post
+hibachiFilters' post = do
+    node <- hibachiFilters (post^.content)
+    return $ post & content .~ node
 
 readCM :: Text -> Node
 readCM = commonmarkToNode [optSmart]

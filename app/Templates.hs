@@ -127,7 +127,7 @@ renderPost post = renderPost'
             htmlBody $
                 article_ [class_ "post"] $ do
                     postHeader title readtime
-                    renderNode [optUnsafe] $ apply hibachiFilters content
+                    renderNode [optUnsafe] content
                     postFooter postedTime tags author
 
 renderAbout :: Node -> Html ()
@@ -136,11 +136,10 @@ renderAbout about =
         htmlHead (Just "Nadja 'dequbed' Reitzenstein") (Just "") ["Blog", "dequbed"]
         htmlBody $
             div_ [class_ "post"]
-                $ renderNode []
-                $ apply hibachiFilters about
+                $ renderNode [] about
 
-aboutTemplate :: Text -> Text
-aboutTemplate = renderHtmlT . renderAbout . readCM
+aboutTemplate :: Node -> Text
+aboutTemplate = renderHtmlT . renderAbout
 
 postTemplate :: Meta -> Text -> Either Text Text
 postTemplate m t = renderHtmlT . renderPost <$> readPost m t

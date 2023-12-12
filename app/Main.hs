@@ -18,6 +18,7 @@ import Data.H2O.Shake.Tags
 import Data.H2O.Shake.LFS (getGitLfsBlob)
 import Data.H2O.Feed
 import Data.H2O.Types
+import Data.H2O.Templates
 
 import Development.Shake
 
@@ -47,7 +48,8 @@ main = hibachiBuild $ do
     -- also needs a template applied
     "about.html" %> \out -> do
         file_content <- getVersionedFile "static" "about.md"
-        writeFile out (aboutTemplate file_content)
+        about <- hibachiFilters $ readCM file_content
+        writeFile out (aboutTemplate about)
 
     -- CSS files are generated from code and available independent of the git backend
     "css/default.css" %> \out -> writeFile out styleText
@@ -68,13 +70,8 @@ main = hibachiBuild $ do
         posts <- needBranchPosts "posts"
         writeFile out $ renderIndex $ L.reverse $ L.sortOn (^._2.posted) posts
 
-    "*.png" %> \out -> do
-        B.writeFile out =<< getGitLfsBlob "images" out
-
     -- We need to tell shake to actually generate the above files.
     want ["robots.txt", "about.html", "css/default.css", "css/code.css", "feed.html", "feed.xml", "index.html"]
-
-    want ["bird_birb_borb.png"]
 
     -- This installs an user-defined rule. Shake will use the below code to save
     -- a post it has read from the git index.
@@ -84,7 +81,9 @@ main = hibachiBuild $ do
         let filename = genFileN $ p^.title
             path = "p" </> filename <.> "html"
 
-        writeFile path $ renderPostText p
+        post <- hibachiFilters' p
+
+        writeFile path $ renderPostText post
 
         return $ pathToLink path
 
